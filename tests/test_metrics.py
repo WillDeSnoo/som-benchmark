@@ -147,6 +147,38 @@ def test_mean_ci_across_seeds():
     assert mean_ci_across_seeds([])["n"] == 0
 
 
+def test_per_atom_and_per_instance_views_agree():
+    """`analysis.atom_ranks` must break ties the same way `topk_hits` does.
+
+    Stage 4 reads the per-atom ranks while stage 3 reports the per-instance
+    top-k, both from the same saved probabilities. If the two tie-break
+    streams diverged, the failure analysis would contradict the headline
+    numbers for no visible reason.
+    """
+    from som.analysis import instance_topk_table
+
+    rng = np.random.default_rng(5)
+    y, p, inst = [], [], []
+    for m in range(60):
+        k = int(rng.integers(4, 12))
+        lab = np.zeros(k, dtype=int)
+        lab[rng.integers(0, k)] = 1
+        # deliberately coarse scores, so ties are common
+        y.append(lab)
+        p.append(np.round(rng.uniform(0, 1, k), 1))
+        inst.append(np.full(k, m))
+    y = np.concatenate(y)
+    p = np.concatenate(p)
+    inst = np.concatenate(inst)
+
+    for seed in (0, 1, 4):
+        hits = topk_hits(y, p, inst, ks=(1, 2), rng=np.random.default_rng(seed))
+        table = instance_topk_table(y, p, inst, ks=(1, 2), seed=seed)
+        for k in (1, 2):
+            from_table = [table[i][f"top{k}"] for i in sorted(table)]
+            assert from_table == hits[k].tolist(), (seed, k)
+
+
 def test_nan_values_are_dropped_not_propagated():
     s = mean_ci_across_seeds([0.4, float("nan"), 0.6])
     assert s["n"] == 2

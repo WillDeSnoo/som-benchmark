@@ -34,6 +34,14 @@ MODEL_LABELS = {
     "gnn": "message-passing GNN",
 }
 
+#: shorter forms for crowded category axes
+MODEL_LABELS_SHORT = {
+    "prior": "atom-type\nfrequency",
+    "fp_gbm": "fingerprint\n+ GBM",
+    "phys_gbm": "Hückel\n+ GBM",
+    "gnn": "GNN",
+}
+
 MODE_LABELS = {"random": "random split", "scaffold": "scaffold split"}
 
 
@@ -46,7 +54,7 @@ def use_style() -> None:
         "font.sans-serif": ["Helvetica Neue", "Helvetica", "Arial", "DejaVu Sans"],
         "font.size": 9,
         "axes.titlesize": 11,
-        "axes.titleweight": "semibold",
+        "axes.titleweight": "bold",
         "axes.titlecolor": INK,
         "axes.labelsize": 9,
         "axes.labelcolor": INK_2,
@@ -75,9 +83,15 @@ def strip_frame(ax, keep=("left", "bottom")) -> None:
         spine.set_visible(side in keep)
 
 
-def label_bars(ax, bars, values, fmt="{:.2f}", inside=False, color=None) -> None:
-    """Direct value labels. Required wherever a low-contrast slot is used."""
-    for b, v in zip(bars, values):
+def label_bars(
+    ax, bars, values, fmt="{:.2f}", inside=False, color=None, tops=None
+) -> None:
+    """Direct value labels. Required wherever a low-contrast slot is used.
+
+    `tops` is the height the label must clear - pass the upper CI ends so the
+    text sits above the error-bar cap rather than on top of it.
+    """
+    for i, (b, v) in enumerate(zip(bars, values)):
         if v is None or v != v:  # NaN
             continue
         if inside:
@@ -86,13 +100,17 @@ def label_bars(ax, bars, values, fmt="{:.2f}", inside=False, color=None) -> None
                 fmt.format(v), ha="center", va="center", fontsize=7.5,
                 color=color or "#ffffff",
             )
-        else:
-            ax.text(
-                b.get_x() + b.get_width() / 2,
-                b.get_height() + 0.012,
-                fmt.format(v), ha="center", va="bottom", fontsize=7.5,
-                color=INK_2,
-            )
+            continue
+        y = b.get_height()
+        if tops is not None:
+            t = tops[i]
+            if t == t:  # not NaN
+                y = max(y, t)
+        ax.text(
+            b.get_x() + b.get_width() / 2, y + 0.022,
+            fmt.format(v), ha="center", va="bottom", fontsize=7.5,
+            color=INK_2,
+        )
 
 
 def footnote(fig, text: str) -> None:

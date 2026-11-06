@@ -1,0 +1,3 @@
+mode,seed,test_molecules,train_scaffolds,test_scaffolds,shared_scaffolds,nn_tanimoto_mean,nn_tanimoto_median,nn_tanimoto_p90,frac_test_with_nn_above_0.6
+random,0,136,305,91,34,0.5116951798574565,0.4913768324231101,0.7744360902255639,0.36764705882352944
+scaffold,0,136,300,78,0,0.3946830245557089,0.34346642468239563,0.6085106382978723,0.10294117647058823

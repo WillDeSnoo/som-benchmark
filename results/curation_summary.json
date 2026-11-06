@@ -1,0 +1,66 @@
+{
+  "som_fields": [
+    "PRIMARY_SOM",
+    "SECONDARY_SOM",
+    "TERTIARY_SOM"
+  ],
+  "records_read": 2003,
+  "excluded_total": 0,
+  "excluded_by_reason": {},
+  "duplicate_instances_merged": 0,
+  "duplicate_label_conflicts": 0,
+  "instances": 2003,
+  "molecules": 679,
+  "scaffolds": 390,
+  "acyclic_molecules": 45,
+  "candidate_atoms": 41878,
+  "positive_atoms_all_tiers": 4163,
+  "positive_atoms_primary_only": 2853,
+  "per_isoform": {
+    "1A2": {
+      "instances": 271,
+      "atoms": 5330,
+      "positives": 622
+    },
+    "2A6": {
+      "instances": 105,
+      "atoms": 1630,
+      "positives": 200
+    },
+    "2B6": {
+      "instances": 151,
+      "atoms": 2810,
+      "positives": 294
+    },
+    "2C8": {
+      "instances": 142,
+      "atoms": 3084,
+      "positives": 305
+    },
+    "2C9": {
+      "instances": 226,
+      "atoms": 4758,
+      "positives": 462
+    },
+    "2C19": {
+      "instances": 218,
+      "atoms": 4528,
+      "positives": 403
+    },
+    "2D6": {
+      "instances": 270,
+      "atoms": 5632,
+      "positives": 502
+    },
+    "2E1": {
+      "instances": 145,
+      "atoms": 2241,
+      "positives": 305
+    },
+    "3A4": {
+      "instances": 475,
+      "atoms": 11865,
+      "positives": 1070
+    }
+  }
+}

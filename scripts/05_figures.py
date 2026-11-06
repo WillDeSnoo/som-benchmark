@@ -18,6 +18,7 @@ from som.viz import (
     AXIS,
     INK_2,
     MODEL_LABELS,
+    MODEL_LABELS_SHORT,
     MODE_LABELS,
     MUTED,
     ON_FILL,
@@ -87,11 +88,11 @@ def fig_main(summary):
                 x + (s - 0.5) * (width + 0.018), means, yerr=err,
                 fmt="none", ecolor=INK_2, elinewidth=1.0, capsize=2.5, zorder=4,
             )
-            label_bars(ax, bars, means, fmt="{:.2f}")
+            label_bars(ax, bars, means, fmt="{:.2f}", tops=np.asarray(his))
 
         ax.set_xticks(x)
         ax.set_xticklabels(
-            [MODEL_LABELS[m].replace(" + ", "\n+ ") for m in present], fontsize=8
+            [MODEL_LABELS_SHORT.get(m, m) for m in present], fontsize=8
         )
         ax.set_ylim(0, 1.0)
         ax.set_ylabel("per-molecule accuracy")
@@ -158,10 +159,13 @@ def fig_per_isoform(rows):
             va="center", fontsize=7, color=MUTED,
         )
 
-    ax.legend(loc="lower left", ncols=2, bbox_to_anchor=(0, -0.02))
+    ax.legend(
+        loc="lower left", bbox_to_anchor=(0, 1.02), ncols=4,
+        borderaxespad=0, fontsize=7.5,
+    )
     ax.set_title(
         "Per-isoform performance, and how uneven the support is",
-        loc="left",
+        loc="left", pad=28,
     )
     footnote(
         fig,
@@ -177,8 +181,10 @@ def fig_site_type(rows, min_atoms=30):
     rows = [r for r in rows if r["mode"] == "scaffold"]
     if not rows:
         return
-    show = [m for m in ["fp_gbm", "phys_gbm", "gnn"]
-            if m in {r["model"] for r in rows}]
+    # the frequency reference is included here on purpose: it outperforms the
+    # learned models on several site types, which is the single most
+    # informative thing in this figure
+    show = models_present(rows)
     by = {(r["model"], r["site_type"]): r for r in rows}
 
     counts = {}
@@ -191,9 +197,9 @@ def fig_site_type(rows, min_atoms=30):
     if not types:
         return
 
-    fig, ax = plt.subplots(figsize=(8.2, 0.52 * len(types) + 2.0))
+    fig, ax = plt.subplots(figsize=(8.2, 0.62 * len(types) + 2.0))
     y = np.arange(len(types))
-    h = 0.78 / len(show)
+    h = 0.80 / len(show)
 
     for i, m in enumerate(show):
         vals = [f(by.get((m, t)), "recall_at_2_pooled") for t in types]
@@ -217,9 +223,14 @@ def fig_site_type(rows, min_atoms=30):
             va="center", fontsize=7, color=MUTED,
         )
 
-    ax.legend(loc="lower right", ncols=1)
+    # outside the axes: inside, it lands on whichever rows happen to be short
+    ax.legend(
+        loc="lower left", bbox_to_anchor=(0, 1.02), ncols=4,
+        borderaxespad=0, fontsize=7.5,
+    )
     ax.set_title(
-        "Which metabolic chemistry each model actually finds", loc="left"
+        "Which metabolic chemistry each model actually finds",
+        loc="left", pad=28,
     )
     footnote(
         fig,
@@ -271,7 +282,7 @@ def fig_novelty(rows):
     strip_frame(ax)
     ax.legend(loc="upper left", ncols=2)
     ax.set_title(
-        "Performance decays with distance from the training set", loc="left"
+        "Accuracy against distance from the training set", loc="left"
     )
     footnote(
         fig,

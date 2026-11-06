@@ -73,11 +73,15 @@ def topk_hits(
     for iid in sorted(slices):
         idx = slices[iid]
         yy, pp = y[idx], p[idx]
+        n = pp.size
+        # The draw happens before the skip, so that the random stream depends
+        # only on the instance sizes and not on which instances have labels.
+        # `analysis.atom_ranks` draws the same way, which is what keeps the
+        # per-atom and per-instance views of the same predictions consistent.
+        jitter = rng.permutation(n)
         if yy.sum() == 0:
             continue
-        n = pp.size
         if tie_policy == "random":
-            jitter = rng.permutation(n)
             order = np.lexsort((jitter, -pp))
         elif tie_policy == "pessimistic":
             # among equal scores, put the positives last
