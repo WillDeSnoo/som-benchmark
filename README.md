@@ -9,7 +9,7 @@ top. It is the computational question behind "which position do I block to stop
 this compound being cleared", and it is a genuinely atom-level problem: the
 answer is a position, not a molecular property.
 
-Four approaches are compared on the same splits, with the same metrics:
+Five approaches are compared on the same splits, with the same metrics:
 
 | | what it uses |
 |---|---|
@@ -17,6 +17,7 @@ Four approaches are compared on the same splits, with the same metrics:
 | **fingerprint + GBM** | hashed circular atom environments (Morgan, radii 0–2) with gradient boosting. |
 | **Hückel physics + GBM** | ~60 interpretable descriptors: simple-Hückel frontier densities and Coulson free valence, Gasteiger charges, E-state indices, Crippen contributions, valence/ring context. |
 | **message-passing GNN** | the molecular graph, learning its own representation from basic atom and bond features. |
+| **GNN + Hückel features** | the same network handed the physics descriptors as extra node features. The ablation that separates "what information is available" from "which model class uses it best". |
 
 The frequency reference is there on purpose. "Top-1 of 0.65" means very little
 until you know that guessing by atom type alone already gets a good way there,
@@ -40,19 +41,59 @@ The scaffold split is the one to read first.
 | fingerprint + GBM | 0.601 [0.568, 0.635] | 0.741 [0.721, 0.760] | 0.871 [0.865, 0.878] | 0.499 | 0.018 |
 | **Hückel physics + GBM** | **0.660 [0.626, 0.695]** | **0.811 [0.787, 0.834]** | **0.887 [0.876, 0.899]** | **0.531** | 0.019 |
 | message-passing GNN | 0.642 [0.611, 0.673] | 0.785 [0.762, 0.808] | 0.873 [0.862, 0.884] | 0.501 | 0.032 |
+| GNN + Hückel features | 0.644 [0.618, 0.671] | 0.768 [0.747, 0.789] | 0.872 [0.863, 0.880] | 0.501 | 0.028 |
 
 ![Model comparison](figures/fig1_model_comparison.png)
 
-Four things are worth saying about this, two of them unflattering.
+Because every model sees the same splits, differences can be **paired**, which
+is much more sensitive than eyeballing overlapping intervals. Full tables in
+[results/summary.md](results/summary.md); the ones that matter are below.
 
-**The physics descriptors win, and the GNN does not beat them.** About 60
-interpretable descriptors — Hückel frontier densities and free valence,
-Gasteiger charges, E-state, Crippen contributions, valence context — outperform
-both a 1024-bit fingerprint and a learned graph representation, on both splits.
-The CIs for the Hückel and GNN rows overlap, so the honest claim is that they
-are comparable and the fingerprint is behind, not that the ranking is
-established. With 679 molecules the GNN is almost certainly data-limited; this
-is evidence about this dataset at this size, not about graph networks.
+**The physics descriptors beat the hashed fingerprint, clearly.** Paired over 20
+splits, Hückel + GBM gains +0.061 top-1 [+0.045, +0.076] and +0.073 top-2 over
+fingerprint + GBM, both p < 0.0001. About 60 interpretable descriptors beat 1024
+hashed bits.
+
+**But the GNN did not need the physics — and that is the most informative result
+here.** Giving the GNN the identical feature set `phys_gbm` uses changes
+essentially nothing:
+
+| gnn_huckel − gnn | difference [95% CI] | p |
+|---|---|---|
+| top-1 | +0.002 [−0.012, +0.016] | 0.80 |
+| top-2 | −0.016 [−0.031, −0.001] | 0.039 |
+| ROC-AUC | +0.0003 [−0.007, +0.008] | 0.94 |
+| avg precision | −0.002 [−0.019, +0.015] | 0.81 |
+
+Three of four metrics are flat and the fourth is slightly *negative* (and with
+four metrics tested, a single p just under 0.05 is weak evidence). So the
+message-passing network was already extracting whatever the Hückel descriptors
+encode. That is not surprising on reflection — frontier densities and free
+valence are functions of the molecular graph, and message passing over that
+graph is exactly the operation that can approximate them. The physics and the
+learned representation carry the **same information**, not complementary
+information.
+
+**Which means the Hückel model's advantage is not about chemistry at all — it is
+about model class.** On *identical* features, gradient boosting beats the GNN:
+
+| phys_gbm − gnn_huckel | difference [95% CI] | p |
+|---|---|---|
+| top-1 | +0.016 [−0.005, +0.037] | 0.13 |
+| top-2 | +0.042 [+0.030, +0.055] | <0.0001 |
+| ROC-AUC | +0.016 [+0.011, +0.022] | <0.0001 |
+| avg precision | +0.040 [+0.029, +0.051] | <0.0001 |
+
+Same inputs, same splits, same labels; the only difference is the estimator. At
+679 molecules a boosted-tree ensemble fits this problem better than a
+422k-parameter graph network. The honest headline is therefore **not** "physics
+beats deep learning" — it is that at this data scale the tabular model is the
+better estimator, and the hand-built descriptors are a cheap, interpretable,
+and apparently sufficient way to hand it the relevant structure.
+
+This also sharpens the earlier caveat rather than removing it: the GNN is
+data-limited and under-tuned relative to the GBMs, and nothing here says the
+ordering would survive at 10,000 molecules.
 
 The descriptors are also readable, which the GNN's are not. A logistic
 regression on the same features (fitted only to be read, never used for
@@ -70,10 +111,10 @@ directionally and not as effect sizes.
 
 **A quarter of the top-1 performance is available from atom type alone.** The
 frequency reference reaches 0.425 top-1 and 0.607 top-2 knowing nothing but
-element, hydrogen count, aromaticity and ring membership. The best model adds
-0.235 top-1 over it. That is a real gain, and it is also the correct
-denominator: a paper reporting 0.66 without this row is reporting something
-much less impressive than it sounds.
+element, hydrogen count, aromaticity and ring membership. Paired, the best model
+adds +0.250 top-1 [+0.226, +0.274] over it. That is a large, unambiguous gain —
+and it is also the correct denominator: a paper reporting 0.66 without this row
+is reporting something much less impressive than it sounds.
 
 **The scaffold split barely costs anything — which was not what I expected.**
 
@@ -351,10 +392,19 @@ exactly where hydrogen abstraction is easy.
 **The GNN** is plain PyTorch — message passing with edge features, residual
 connections and layer norm, an isoform embedding added to the initial node
 states, and early stopping on validation average precision. No PyTorch
-Geometric, which keeps the pinned environment small and portable. It is given
-only basic atom and bond features, deliberately *not* the Hückel descriptors, so
-that "learned representation" and "hand-built physics" are compared rather than
-one quietly containing the other.
+Geometric, which keeps the pinned environment small and portable. 34 node
+features, 7 edge features, an isoform embedding added to the initial node
+states, 4 message-passing layers at width 128 with residual connections and
+layer norm, 422k parameters, early stopping on validation average precision.
+
+The base `gnn` is given only basic atom and bond features, deliberately *not*
+the Hückel descriptors, so that "learned representation" and "hand-built
+physics" are compared rather than one quietly containing the other.
+`gnn_huckel` is the same network with the physics descriptors appended to the
+node features (55 instead of 34), which makes its input identical to what
+`phys_gbm` receives. A test asserts that the physics feature set is exactly the
+graph feature set plus the Hückel block, so the ablation really does isolate
+the physics and nothing else.
 
 ---
 
@@ -397,10 +447,16 @@ Stated plainly, because they bound what these numbers support:
 In rough order of what would most change the conclusions: an external
 prospective test set and a comparison against SMARTCyp and FAME3; treating the
 unlabelled atoms properly as positive-unlabelled rather than as negatives;
-pooling in a second annotation source to test transfer; and giving the GNN the
-Hückel descriptors as extra node features, which is the one ablation here that
-would say whether the physics and the learned representation carry the same
-information or different information.
+pooling in a second annotation source to test transfer; a proper
+hyperparameter search for the GNN, since the "same features, different model
+class" result above would be much stronger if the GNN had been tuned as hard as
+the GBMs; and an explicit ensemble of the frequency reference with a learned
+model, given how badly the learned models lose on sulfur and methyl sites.
+
+The GNN-with-Hückel-features ablation, which used to be on this list, is now
+run — see the results above. It is the clearest single finding in the project:
+the physics descriptors are not adding information the graph network lacked,
+so the remaining gap is about model class and data scale.
 
 ---
 

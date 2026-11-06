@@ -95,3 +95,27 @@ gnn,scaffold,O-site (direct),91,0.0549
 gnn,scaffold,P-oxidation / desulfuration,36,0.9167
 gnn,scaffold,oxidative dehalogenation,31,0.9032
 gnn,scaffold,aromatic C (substituted),22,0.0
+gnn_huckel,random,aromatic C-H hydroxylation,2426,0.2976
+gnn_huckel,random,N-dealkylation (alpha to N),2314,0.7299
+gnn_huckel,random,O-dealkylation (alpha to O),1144,0.7771
+gnn_huckel,random,benzylic / allylic hydroxylation,1059,0.458
+gnn_huckel,random,aliphatic C-H hydroxylation,482,0.2241
+gnn_huckel,random,S-oxidation,402,0.6169
+gnn_huckel,random,methyl hydroxylation,302,0.1589
+gnn_huckel,random,N-oxidation,298,0.3255
+gnn_huckel,random,O-site (direct),102,0.0882
+gnn_huckel,random,aromatic C (substituted),37,0.0
+gnn_huckel,random,oxidative dehalogenation,32,0.25
+gnn_huckel,random,P-oxidation / desulfuration,30,1.0
+gnn_huckel,scaffold,aromatic C-H hydroxylation,2412,0.3076
+gnn_huckel,scaffold,N-dealkylation (alpha to N),2221,0.7177
+gnn_huckel,scaffold,O-dealkylation (alpha to O),1254,0.7313
+gnn_huckel,scaffold,benzylic / allylic hydroxylation,1082,0.4436
+gnn_huckel,scaffold,S-oxidation,435,0.6345
+gnn_huckel,scaffold,aliphatic C-H hydroxylation,365,0.4082
+gnn_huckel,scaffold,N-oxidation,319,0.2978
+gnn_huckel,scaffold,methyl hydroxylation,290,0.2138
+gnn_huckel,scaffold,O-site (direct),91,0.1429
+gnn_huckel,scaffold,P-oxidation / desulfuration,36,0.8889
+gnn_huckel,scaffold,oxidative dehalogenation,31,0.871
+gnn_huckel,scaffold,aromatic C (substituted),22,0.0

@@ -11,8 +11,10 @@ from __future__ import annotations
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 
-#: categorical slots, in fixed order - never cycled, never reordered
-SERIES = ["#2a78d6", "#eb6834", "#1baf7a", "#eda100"]
+#: categorical slots, in fixed order - never cycled, never reordered.
+#: This ordering is validated on the adjacent pairlist (grouped bars, lines),
+#: which is the only arrangement used here.
+SERIES = ["#2a78d6", "#eb6834", "#1baf7a", "#eda100", "#e87ba4"]
 
 #: single hue for sequential/ordinal magnitude
 SEQ = ["#86b6ef", "#5598e7", "#2a78d6", "#1c5cab", "#104281"]
@@ -32,6 +34,7 @@ MODEL_LABELS = {
     "fp_gbm": "fingerprint + GBM",
     "phys_gbm": "Hückel physics + GBM",
     "gnn": "message-passing GNN",
+    "gnn_huckel": "GNN + Hückel features",
 }
 
 #: shorter forms for crowded category axes
@@ -40,6 +43,7 @@ MODEL_LABELS_SHORT = {
     "fp_gbm": "fingerprint\n+ GBM",
     "phys_gbm": "Hückel\n+ GBM",
     "gnn": "GNN",
+    "gnn_huckel": "GNN\n+ Hückel",
 }
 
 MODE_LABELS = {"random": "random split", "scaffold": "scaffold split"}

@@ -30,7 +30,7 @@ from som.viz import (
     use_style,
 )
 
-ORDER = ["prior", "fp_gbm", "phys_gbm", "gnn"]
+ORDER = ["prior", "fp_gbm", "phys_gbm", "gnn", "gnn_huckel"]
 
 
 def read(path):
@@ -102,7 +102,7 @@ def fig_main(summary):
 
     axes[0].legend(loc="upper left", ncols=2, bbox_to_anchor=(0, 1.0))
     fig.suptitle(
-        "Finding the site of metabolism: four approaches, two splits",
+        "Finding the site of metabolism: five approaches, two splits",
         x=0.008, ha="left", fontsize=12, fontweight="semibold",
     )
     footnote(

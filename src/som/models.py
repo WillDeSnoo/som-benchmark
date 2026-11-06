@@ -26,6 +26,18 @@
     representation" is compared against "hand-built physics" rather than
     quietly containing it.
 
+``gnn_huckel``
+    The same network given exactly the feature set ``phys_gbm`` uses, Hückel
+    descriptors included. This is the ablation that says whether the physics
+    and the learned representation carry the *same* information or different
+    information: if the GNN can already infer frontier-orbital structure by
+    passing messages, adding it explicitly should change nothing, and if it
+    cannot, this should close the gap to ``phys_gbm``. Note that the physics
+    block includes neighbour-aggregated Hückel terms, which message passing
+    could in principle derive for itself; they are kept so that the GNN and the
+    GBM see an identical feature set and the comparison is about the model
+    rather than the inputs.
+
 Hyperparameters are chosen on the validation split of the first seed only and
 then reused for every later seed. The test set is never touched by tuning.
 """
@@ -46,7 +58,7 @@ from sklearn.preprocessing import StandardScaler
 from .features import AtomTable, build_atom_table, isoform_onehot
 from .splits import Split, atom_mask
 
-MODELS = ("prior", "fp_gbm", "phys_gbm", "gnn")
+MODELS = ("prior", "fp_gbm", "phys_gbm", "gnn", "gnn_huckel")
 
 #: cache of featurized tables, keyed by (feature kind, label field)
 _TABLE_CACHE: dict[tuple[str, str], AtomTable] = {}
@@ -346,6 +358,8 @@ def _fit_gnn(
     split: Split,
     label_field: str,
     seed: int,
+    node_kind: str = "graph",
+    name: str = "gnn",
     hidden: int = 128,
     layers: int = 4,
     epochs: int = 120,
@@ -366,7 +380,7 @@ def _fit_gnn(
     for r in work:
         r["_labels"] = r[label_field]
 
-    cache = _graph_cache(work)
+    cache = _graph_cache(work, kind=node_kind)
     iso_index = {iso: i for i, iso in enumerate(ISOFORMS)}
     n_node = next(iter(cache.values()))["x"].shape[1]
     n_edge = next(iter(cache.values()))["edge"].shape[1]
@@ -439,7 +453,7 @@ def _fit_gnn(
         ).numpy()
 
     return Prediction(
-        model="gnn",
+        model=name,
         y_test=test_batch["y"].numpy().astype(np.int8),
         p_test=p_te,
         inst_test=test_batch["inst"],
@@ -449,7 +463,9 @@ def _fit_gnn(
         inst_val=val_batch["inst"],
         chosen_params={
             "hidden": hidden, "layers": layers, "lr": lr,
-            "batch_size": batch_size, "best_val_ap": float(best_score),
+            "batch_size": batch_size, "node_kind": node_kind,
+            "n_node_features": int(n_node),
+            "best_val_ap": float(best_score),
         },
         n_train_atoms=int(sum(cache[work[i]["smiles"]]["x"].shape[0]
                               for i in split.train_inst)),
@@ -493,7 +509,11 @@ def fit_predict(
     elif name == "phys_gbm":
         pred = _fit_gbm("phys_gbm", "phys", instances, split, label_field, seed, tune)
     elif name == "gnn":
-        pred = _fit_gnn(instances, split, label_field, seed)
+        pred = _fit_gnn(instances, split, label_field, seed,
+                        node_kind="graph", name="gnn")
+    elif name == "gnn_huckel":
+        pred = _fit_gnn(instances, split, label_field, seed,
+                        node_kind="phys", name="gnn_huckel")
     else:
         raise ValueError(f"unknown model: {name!r}")
     return calibrate(pred)

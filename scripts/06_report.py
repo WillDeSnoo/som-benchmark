@@ -12,7 +12,7 @@ import json
 from som.paths import RESULTS
 from som.viz import MODEL_LABELS
 
-ORDER = ["prior", "fp_gbm", "phys_gbm", "gnn"]
+ORDER = ["prior", "fp_gbm", "phys_gbm", "gnn", "gnn_huckel"]
 
 
 def read(name):
@@ -165,6 +165,56 @@ def main() -> None:
             cells = [fv(by.get((m, b), {}), "top1_mean") for m in models]
             out.append(f"| {b} | {n} | " + " | ".join(cells) + " |")
         out.append("")
+
+    # ---- paired comparisons --------------------------------------------
+    # Models are run on the same (mode, seed) splits, so differences can be
+    # paired, which is far more sensitive than comparing two overlapping CIs.
+    per_run = read("metrics_per_run.csv")
+    if per_run:
+        import numpy as np
+        from scipy import stats
+
+        by_split: dict[tuple[str, str], dict[str, dict]] = {}
+        for r in per_run:
+            by_split.setdefault((r["mode"], r["seed"]), {})[r["model"]] = r
+
+        pairs = [
+            ("gnn_huckel", "gnn",
+             "does giving the GNN the Hückel descriptors help?"),
+            ("phys_gbm", "gnn_huckel",
+             "same features, different model class"),
+            ("phys_gbm", "fp_gbm",
+             "physics descriptors vs hashed environments"),
+            ("phys_gbm", "prior",
+             "best model vs the frequency reference"),
+        ]
+        lines = []
+        for a, b, why in pairs:
+            avail = [v for v in by_split.values() if a in v and b in v]
+            if len(avail) < 3:
+                continue
+            lines.append(f"**{a} − {b}** — {why} (paired over "
+                         f"{len(avail)} splits)")
+            lines.append("")
+            lines.append("| metric | difference [95% CI] | p |")
+            lines.append("|---|---|---|")
+            for metric in ("top1", "top2", "roc_auc", "avg_precision"):
+                xa = np.array([float(v[a][metric]) for v in avail])
+                xb = np.array([float(v[b][metric]) for v in avail])
+                d = xa - xb
+                t, p = stats.ttest_rel(xa, xb)
+                half = stats.t.ppf(0.975, d.size - 1) * d.std(ddof=1) / np.sqrt(d.size)
+                lines.append(
+                    f"| {metric} | {d.mean():+.4f} "
+                    f"[{d.mean() - half:+.4f}, {d.mean() + half:+.4f}] "
+                    f"| {p:.4f} |"
+                )
+            lines.append("")
+        if lines:
+            out += ["## Paired model comparisons", "",
+                    "Paired t-tests on the per-split differences. Four metrics "
+                    "are tested per pair, so a single p just under 0.05 should "
+                    "be read with that multiplicity in mind.", ""] + lines
 
     diag = read("split_diagnostics.csv")
     if diag:

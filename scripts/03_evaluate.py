@@ -136,14 +136,39 @@ def main() -> None:
                             w.writerow([f, f"{c:.6f}"])
 
     # ---------------- write per-run table ----------------
+    # Merge with whatever is already there, keyed on (model, mode, seed), so
+    # that a later run covering only one model adds to the table instead of
+    # replacing it. Rows recomputed in this run win.
     per_run = RESULTS / "metrics_per_run.csv"
     fields = list(rows[0].keys())
+    merged: dict[tuple[str, str, str], dict] = {}
+    numeric = set(METRIC_KEYS) | {"ece_calibrated", "brier_calibrated"}
+    if per_run.exists():
+        with per_run.open(newline="") as fh:
+            for old in csv.DictReader(fh):
+                # values come back as strings; the aggregation needs floats
+                for k in numeric:
+                    if k in old:
+                        try:
+                            old[k] = float(old[k])
+                        except (TypeError, ValueError):
+                            old[k] = float("nan")
+                merged[(old["model"], old["mode"], str(old["seed"]))] = old
+    for r in rows:
+        merged[(r["model"], r["mode"], str(r["seed"]))] = r
+
+    def sort_key(item):
+        (model, mode, seed), _ = item
+        order = list(MODELS)
+        return (mode, order.index(model) if model in order else 99, int(seed))
+
     with per_run.open("w", newline="") as fh:
-        w = csv.DictWriter(fh, fieldnames=fields)
+        w = csv.DictWriter(fh, fieldnames=fields, extrasaction="ignore")
         w.writeheader()
-        for r in rows:
+        for _, r in sorted(merged.items(), key=sort_key):
             w.writerow(r)
-    print(f"\nwrote {per_run}")
+    print(f"\nwrote {per_run} ({len(merged)} rows, {len(rows)} from this run)")
+    rows = [dict(r) for _, r in sorted(merged.items(), key=sort_key)]
 
     diag_path = RESULTS / "split_diagnostics.csv"
     if diag_rows:
@@ -156,8 +181,10 @@ def main() -> None:
 
     # ---------------- aggregate across seeds ----------------
     summary = []
-    for mode in args.modes:
-        for name in args.models:
+    all_modes = [m for m in SPLIT_MODES if any(r["mode"] == m for r in rows)]
+    all_models = [m for m in MODELS if any(r["model"] == m for r in rows)]
+    for mode in all_modes:
+        for name in all_models:
             sub = [r for r in rows if r["model"] == name and r["mode"] == mode]
             if not sub:
                 continue
