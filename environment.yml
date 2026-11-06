@@ -1,0 +1,24 @@
+# Pinned environment for reproducing the results in README.md.
+#
+#   mamba env create -f environment.yml   (or: conda env create -f environment.yml)
+#   conda activate som-bench
+#   pip install -e .
+#
+# These are the exact versions the committed results were produced with, on
+# macOS/arm64. CPU-only PyTorch is deliberate: the GNN here is small enough that
+# a GPU buys nothing, and a CPU pin keeps the environment portable.
+name: som-bench
+channels:
+  - conda-forge
+dependencies:
+  - python=3.12.16
+  - rdkit=2025.03.3
+  - scikit-learn=1.9.1
+  - numpy=2.5.4
+  - pandas=3.1.1
+  - scipy=1.18.1
+  - matplotlib=3.11.2
+  - pytorch-cpu=2.14.1
+  - pytest=9.2.0
+  - pip=26.2.2
+  - setuptools=84.2.1

@@ -1,0 +1,19 @@
+# Raw and derived data are NOT redistributed in this repo.
+# `make data` fetches them from the upstream source at the pinned commit.
+data/
+
+# Large / regenerable intermediates
+cache/
+*.pt
+*.joblib
+
+*.egg-info/
+build/
+dist/
+
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ipynb_checkpoints/
+.DS_Store
+.venv/

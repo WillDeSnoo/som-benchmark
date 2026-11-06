@@ -1,0 +1,28 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "som-benchmark"
+version = "0.1.0"
+description = "Atom-level prediction of cytochrome P450 sites of metabolism, with honest evaluation"
+requires-python = ">=3.11"
+license = { file = "LICENSE" }
+dependencies = [
+    "rdkit",
+    "scikit-learn",
+    "numpy",
+    "pandas",
+    "scipy",
+    "matplotlib",
+    "torch",
+]
+
+[project.optional-dependencies]
+dev = ["pytest"]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
