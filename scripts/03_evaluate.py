@@ -21,7 +21,7 @@ import numpy as np
 
 from som.data import load_instances, load_molecules
 from som.metrics import TOP_KS, bootstrap_ci, evaluate, mean_ci_across_seeds
-from som.models import MODELS, clear_caches, fit_predict
+from som.models import GNN_TRIALS, MODELS, clear_caches, fit_predict
 from som.paths import INTERIM, RESULTS, ensure_dirs
 from som.splits import SPLIT_MODES, make_split, split_diagnostics
 
@@ -44,7 +44,16 @@ def main() -> None:
     ap.add_argument("--n-boot", type=int, default=200)
     ap.add_argument("--test-frac", type=float, default=0.2)
     ap.add_argument("--val-frac", type=float, default=0.1)
+    ap.add_argument(
+        "--jobs", type=int, default=1,
+        help="worker processes for the GNN hyperparameter search. Every fit is "
+             "single-threaded and independent, so this changes wall-clock time "
+             "only and never the chosen configuration or any reported number.",
+    )
     args = ap.parse_args()
+
+    import som.models as _models
+    _models._GNN_TUNE_JOBS = max(1, args.jobs)
 
     ensure_dirs()
     pred_dir = INTERIM / "predictions"
@@ -60,7 +69,17 @@ def main() -> None:
     rows = []
     diag_rows = []
 
-    for mode in args.modes:
+    # The GNN search spends its full budget on the first mode it sees and a
+    # shortlist on the rest (see som.models._GNN_PRIMARY_MODE), so that mode
+    # has to come first whenever it is being run at all. Everything downstream
+    # groups by mode, so the order here does not affect any output.
+    from som.models import _GNN_PRIMARY_MODE
+    modes = sorted(args.modes, key=lambda m: m != _GNN_PRIMARY_MODE)
+    if modes != list(args.modes):
+        print(f"split modes reordered to {modes} so that "
+              f"'{_GNN_PRIMARY_MODE}' gets the full GNN search\n")
+
+    for mode in modes:
         for seed in range(args.seeds):
             split = make_split(
                 instances, molecules, mode, seed,
@@ -169,6 +188,27 @@ def main() -> None:
             w.writerow(r)
     print(f"\nwrote {per_run} ({len(merged)} rows, {len(rows)} from this run)")
     rows = [dict(r) for _, r in sorted(merged.items(), key=sort_key)]
+
+    # ---------------- the GNN hyperparameter search ----------------
+    # Written out so that the search is auditable: every configuration tried,
+    # in which mode, and the validation score it was selected on. The test set
+    # plays no part in any of these rows.
+    if GNN_TRIALS:
+        tune_path = RESULTS / "gnn_tuning.csv"
+        with tune_path.open("w", newline="") as fh:
+            w = csv.writer(fh)
+            w.writerow(["model", "mode", "scope", "trial", "params",
+                        "repeats", "epochs_run", "val_avg_precision",
+                        "val_avg_precision_sd", "val_avg_precision_runs"])
+            for t in GNN_TRIALS:
+                w.writerow([t["model"], t["mode"], t["scope"], t["trial"],
+                            json.dumps(t["params"]), t["repeats"],
+                            t["epochs_run"],
+                            f"{t['val_avg_precision']:.6f}",
+                            f"{t['val_avg_precision_sd']:.6f}",
+                            json.dumps([round(v, 6) for v in
+                                        t["val_avg_precision_runs"]])])
+        print(f"wrote {tune_path} ({len(GNN_TRIALS)} trials)")
 
     diag_path = RESULTS / "split_diagnostics.csv"
     if diag_rows:

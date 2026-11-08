@@ -23,9 +23,9 @@ Mean over repeated splits, with the 95% CI of the mean.
 | fingerprint + GBM | 0.622 [0.586, 0.657] | 0.745 [0.716, 0.775] | 0.879 [0.868, 0.889] | 0.523 [0.495, 0.550] | 0.023 |
 | Hückel physics + GBM | 0.684 [0.664, 0.703] | 0.822 [0.794, 0.849] | 0.901 [0.891, 0.911] | 0.589 [0.558, 0.620] | 0.035 |
 | Hückel + BDE + GBM | 0.706 [0.680, 0.732] | 0.828 [0.806, 0.849] | 0.916 [0.907, 0.925] | 0.631 [0.602, 0.661] | 0.024 |
-| message-passing GNN | 0.667 [0.638, 0.696] | 0.794 [0.759, 0.830] | 0.882 [0.868, 0.897] | 0.543 [0.510, 0.577] | 0.023 |
-| GNN + Hückel features | 0.667 [0.637, 0.698] | 0.779 [0.746, 0.813] | 0.884 [0.870, 0.898] | 0.545 [0.512, 0.579] | 0.031 |
-| GNN + BDE | 0.658 [0.635, 0.681] | 0.787 [0.763, 0.812] | 0.883 [0.867, 0.898] | 0.550 [0.510, 0.590] | 0.029 |
+| message-passing GNN | 0.682 [0.661, 0.704] | 0.797 [0.774, 0.820] | 0.892 [0.880, 0.904] | 0.562 [0.535, 0.589] | 0.021 |
+| GNN + Hückel features | 0.673 [0.648, 0.697] | 0.786 [0.756, 0.817] | 0.883 [0.871, 0.895] | 0.548 [0.510, 0.586] | 0.025 |
+| GNN + BDE | 0.652 [0.623, 0.682] | 0.782 [0.759, 0.804] | 0.886 [0.872, 0.899] | 0.556 [0.519, 0.593] | 0.068 |
 
 ### scaffold split
 
@@ -36,9 +36,9 @@ Mean over repeated splits, with the 95% CI of the mean.
 | fingerprint + GBM | 0.601 [0.568, 0.635] | 0.741 [0.721, 0.760] | 0.871 [0.865, 0.878] | 0.499 [0.477, 0.522] | 0.018 |
 | Hückel physics + GBM | 0.660 [0.626, 0.695] | 0.811 [0.787, 0.834] | 0.887 [0.876, 0.899] | 0.531 [0.499, 0.562] | 0.019 |
 | Hückel + BDE + GBM | 0.674 [0.650, 0.698] | 0.812 [0.789, 0.834] | 0.907 [0.899, 0.915] | 0.584 [0.552, 0.616] | 0.019 |
-| message-passing GNN | 0.642 [0.611, 0.673] | 0.785 [0.762, 0.808] | 0.873 [0.862, 0.884] | 0.501 [0.453, 0.548] | 0.032 |
-| GNN + Hückel features | 0.644 [0.618, 0.671] | 0.768 [0.747, 0.789] | 0.872 [0.863, 0.880] | 0.495 [0.457, 0.532] | 0.030 |
-| GNN + BDE | 0.623 [0.583, 0.663] | 0.770 [0.747, 0.794] | 0.877 [0.867, 0.886] | 0.513 [0.465, 0.561] | 0.027 |
+| message-passing GNN | 0.643 [0.615, 0.670] | 0.788 [0.771, 0.804] | 0.880 [0.869, 0.891] | 0.504 [0.459, 0.549] | 0.026 |
+| GNN + Hückel features | 0.640 [0.617, 0.663] | 0.770 [0.746, 0.794] | 0.868 [0.861, 0.875] | 0.487 [0.444, 0.530] | 0.028 |
+| GNN + BDE | 0.623 [0.587, 0.658] | 0.778 [0.751, 0.805] | 0.882 [0.872, 0.891] | 0.521 [0.475, 0.568] | 0.026 |
 
 ## Random minus scaffold
 
@@ -54,53 +54,53 @@ Mean over repeated splits, with the 95% CI of the mean.
 | Hückel physics + GBM | top2 | 0.822 | 0.811 | 0.011 [-0.020, 0.043] |
 | Hückel + BDE + GBM | top1 | 0.706 | 0.674 | 0.032 [0.001, 0.063] |
 | Hückel + BDE + GBM | top2 | 0.828 | 0.812 | 0.016 [-0.011, 0.043] |
-| message-passing GNN | top1 | 0.667 | 0.642 | 0.025 [-0.011, 0.062] |
-| message-passing GNN | top2 | 0.794 | 0.785 | 0.009 [-0.027, 0.046] |
-| GNN + Hückel features | top1 | 0.667 | 0.644 | 0.023 [-0.012, 0.058] |
-| GNN + Hückel features | top2 | 0.779 | 0.768 | 0.011 [-0.023, 0.045] |
-| GNN + BDE | top1 | 0.658 | 0.623 | 0.035 [-0.006, 0.075] |
-| GNN + BDE | top2 | 0.787 | 0.770 | 0.017 [-0.012, 0.047] |
+| message-passing GNN | top1 | 0.682 | 0.643 | 0.040 [0.009, 0.070] |
+| message-passing GNN | top2 | 0.797 | 0.788 | 0.009 [-0.016, 0.033] |
+| GNN + Hückel features | top1 | 0.673 | 0.640 | 0.033 [0.004, 0.062] |
+| GNN + Hückel features | top2 | 0.786 | 0.770 | 0.016 [-0.017, 0.050] |
+| GNN + BDE | top1 | 0.652 | 0.623 | 0.030 [-0.010, 0.070] |
+| GNN + BDE | top2 | 0.782 | 0.778 | 0.004 [-0.027, 0.034] |
 
 ## Recall at top-2 by site type (scaffold split)
 
 | site type | n atoms | atom-type frequency | SMARTCyp (published method) | fingerprint + GBM | Hückel physics + GBM | Hückel + BDE + GBM | message-passing GNN | GNN + Hückel features | GNN + BDE |
 |---|---|---|---|---|---|---|---|---|---|
-| aromatic C-H hydroxylation | 2412 | 0.103 | 0.256 | 0.270 | 0.358 | 0.329 | 0.312 | 0.308 | 0.269 |
-| N-dealkylation (alpha to N) | 2221 | 0.487 | 0.751 | 0.692 | 0.752 | 0.773 | 0.717 | 0.718 | 0.732 |
-| O-dealkylation (alpha to O) | 1254 | 0.618 | 0.676 | 0.727 | 0.748 | 0.754 | 0.778 | 0.731 | 0.772 |
-| benzylic / allylic hydroxylation | 1082 | 0.378 | 0.539 | 0.438 | 0.435 | 0.493 | 0.449 | 0.444 | 0.433 |
-| S-oxidation | 435 | 0.910 | 0.662 | 0.749 | 0.703 | 0.736 | 0.690 | 0.634 | 0.703 |
-| aliphatic C-H hydroxylation | 365 | 0.184 | 0.321 | 0.340 | 0.419 | 0.403 | 0.427 | 0.408 | 0.395 |
-| N-oxidation | 319 | 0.210 | 0.407 | 0.389 | 0.342 | 0.345 | 0.320 | 0.298 | 0.364 |
-| methyl hydroxylation | 290 | 0.665 | 0.083 | 0.241 | 0.190 | 0.217 | 0.214 | 0.214 | 0.193 |
-| O-site (direct) | 91 | 0.000 | 0.000 | 0.077 | 0.143 | 0.165 | 0.055 | 0.143 | 0.099 |
-| P-oxidation / desulfuration | 36 | 1.000 | 0.000 | 0.667 | 0.667 | 0.667 | 0.917 | 0.889 | 1.000 |
-| oxidative dehalogenation | 31 | 0.903 | 0.290 | 0.903 | 0.903 | 0.903 | 0.903 | 0.871 | 0.903 |
+| aromatic C-H hydroxylation | 2412 | 0.103 | 0.256 | 0.270 | 0.358 | 0.329 | 0.301 | 0.295 | 0.255 |
+| N-dealkylation (alpha to N) | 2221 | 0.487 | 0.751 | 0.692 | 0.752 | 0.773 | 0.726 | 0.734 | 0.737 |
+| O-dealkylation (alpha to O) | 1254 | 0.618 | 0.676 | 0.727 | 0.748 | 0.754 | 0.752 | 0.745 | 0.787 |
+| benzylic / allylic hydroxylation | 1082 | 0.378 | 0.539 | 0.438 | 0.435 | 0.493 | 0.445 | 0.435 | 0.449 |
+| S-oxidation | 435 | 0.910 | 0.662 | 0.749 | 0.703 | 0.736 | 0.814 | 0.651 | 0.724 |
+| aliphatic C-H hydroxylation | 365 | 0.184 | 0.321 | 0.340 | 0.419 | 0.403 | 0.447 | 0.389 | 0.400 |
+| N-oxidation | 319 | 0.210 | 0.407 | 0.389 | 0.342 | 0.345 | 0.326 | 0.291 | 0.376 |
+| methyl hydroxylation | 290 | 0.665 | 0.083 | 0.241 | 0.190 | 0.217 | 0.231 | 0.155 | 0.190 |
+| O-site (direct) | 91 | 0.000 | 0.000 | 0.077 | 0.143 | 0.165 | 0.055 | 0.132 | 0.099 |
+| P-oxidation / desulfuration | 36 | 1.000 | 0.000 | 0.667 | 0.667 | 0.667 | 0.972 | 0.917 | 0.917 |
+| oxidative dehalogenation | 31 | 0.903 | 0.290 | 0.903 | 0.903 | 0.903 | 0.903 | 0.903 | 0.903 |
 | aromatic C (substituted) | 22 | 0.000 | 0.000 | 0.000 | 0.000 | 0.045 | 0.000 | 0.000 | 0.000 |
 
 ## Top-2 by isoform (scaffold split)
 
 | isoform | n test inst. | atom-type frequency | SMARTCyp (published method) | fingerprint + GBM | Hückel physics + GBM | Hückel + BDE + GBM | message-passing GNN | GNN + Hückel features | GNN + BDE |
 |---|---|---|---|---|---|---|---|---|---|
-| CYP1A2 | 59 | 0.663 | 0.751 | 0.730 | 0.796 | 0.806 | 0.787 | 0.769 | 0.783 |
-| CYP2A6 | 24 | 0.658 | 0.811 | 0.673 | 0.796 | 0.818 | 0.766 | 0.768 | 0.734 |
-| CYP2B6 | 34 | 0.617 | 0.734 | 0.735 | 0.801 | 0.772 | 0.770 | 0.724 | 0.722 |
-| CYP2C19 | 46 | 0.601 | 0.794 | 0.777 | 0.841 | 0.829 | 0.771 | 0.744 | 0.776 |
-| CYP2C8 | 29 | 0.536 | 0.790 | 0.701 | 0.819 | 0.831 | 0.760 | 0.762 | 0.754 |
-| CYP2C9 | 48 | 0.625 | 0.808 | 0.775 | 0.842 | 0.845 | 0.764 | 0.758 | 0.761 |
-| CYP2D6 | 60 | 0.590 | 0.806 | 0.757 | 0.848 | 0.842 | 0.845 | 0.826 | 0.797 |
-| CYP2E1 | 33 | 0.686 | 0.775 | 0.735 | 0.798 | 0.775 | 0.754 | 0.780 | 0.768 |
-| CYP3A4 | 98 | 0.554 | 0.726 | 0.734 | 0.780 | 0.790 | 0.793 | 0.762 | 0.776 |
+| CYP1A2 | 59 | 0.663 | 0.751 | 0.730 | 0.796 | 0.806 | 0.758 | 0.777 | 0.774 |
+| CYP2A6 | 24 | 0.658 | 0.811 | 0.673 | 0.796 | 0.818 | 0.775 | 0.741 | 0.771 |
+| CYP2B6 | 34 | 0.617 | 0.734 | 0.735 | 0.801 | 0.772 | 0.761 | 0.724 | 0.730 |
+| CYP2C19 | 46 | 0.601 | 0.794 | 0.777 | 0.841 | 0.829 | 0.776 | 0.791 | 0.797 |
+| CYP2C8 | 29 | 0.536 | 0.790 | 0.701 | 0.819 | 0.831 | 0.817 | 0.739 | 0.777 |
+| CYP2C9 | 48 | 0.625 | 0.808 | 0.775 | 0.842 | 0.845 | 0.786 | 0.764 | 0.786 |
+| CYP2D6 | 60 | 0.590 | 0.806 | 0.757 | 0.848 | 0.842 | 0.825 | 0.833 | 0.810 |
+| CYP2E1 | 33 | 0.686 | 0.775 | 0.735 | 0.798 | 0.775 | 0.767 | 0.779 | 0.742 |
+| CYP3A4 | 98 | 0.554 | 0.726 | 0.734 | 0.780 | 0.790 | 0.799 | 0.750 | 0.776 |
 
 ## Top-1 by similarity to the nearest training molecule
 
 | NN Tanimoto | n test inst. | atom-type frequency | SMARTCyp (published method) | fingerprint + GBM | Hückel physics + GBM | Hückel + BDE + GBM | message-passing GNN | GNN + Hückel features | GNN + BDE |
 |---|---|---|---|---|---|---|---|---|---|
-| <=0.30 | 247 | 0.371 | 0.585 | 0.523 | 0.606 | 0.626 | 0.585 | 0.581 | 0.573 |
-| 0.30-0.45 | 239 | 0.482 | 0.666 | 0.645 | 0.699 | 0.729 | 0.687 | 0.694 | 0.695 |
-| 0.45-0.60 | 160 | 0.443 | 0.663 | 0.644 | 0.672 | 0.680 | 0.679 | 0.674 | 0.647 |
-| 0.60-0.75 | 145 | 0.417 | 0.637 | 0.675 | 0.713 | 0.734 | 0.691 | 0.688 | 0.654 |
-| >0.75 | 49 | 0.318 | 0.546 | 0.573 | 0.763 | 0.719 | 0.623 | 0.674 | 0.635 |
+| <=0.30 | 247 | 0.371 | 0.585 | 0.523 | 0.606 | 0.626 | 0.576 | 0.593 | 0.572 |
+| 0.30-0.45 | 239 | 0.482 | 0.666 | 0.645 | 0.699 | 0.729 | 0.695 | 0.698 | 0.694 |
+| 0.45-0.60 | 160 | 0.443 | 0.663 | 0.644 | 0.672 | 0.680 | 0.704 | 0.675 | 0.635 |
+| 0.60-0.75 | 145 | 0.417 | 0.637 | 0.675 | 0.713 | 0.734 | 0.712 | 0.679 | 0.665 |
+| >0.75 | 49 | 0.318 | 0.546 | 0.573 | 0.763 | 0.719 | 0.627 | 0.630 | 0.599 |
 
 ## Paired model comparisons
 
@@ -137,28 +137,28 @@ Paired t-tests on the per-split differences. Four metrics are tested per pair, s
 
 | metric | difference [95% CI] | p |
 |---|---|---|
-| top1 | -0.0136 [-0.0317, +0.0044] | 0.1310 |
-| top2 | -0.0108 [-0.0295, +0.0079] | 0.2430 |
-| roc_auc | +0.0022 [-0.0053, +0.0097] | 0.5428 |
-| avg_precision | +0.0096 [-0.0079, +0.0271] | 0.2661 |
+| top1 | -0.0249 [-0.0387, -0.0111] | 0.0013 |
+| top2 | -0.0126 [-0.0261, +0.0009] | 0.0665 |
+| roc_auc | -0.0024 [-0.0085, +0.0037] | 0.4149 |
+| avg_precision | +0.0056 [-0.0112, +0.0225] | 0.4909 |
 
 **gnn_huckel − gnn** — does giving the GNN the Hückel descriptors help? (paired over 20 splits)
 
 | metric | difference [95% CI] | p |
 |---|---|---|
-| top1 | +0.0017 [-0.0121, +0.0155] | 0.8012 |
-| top2 | -0.0157 [-0.0305, -0.0009] | 0.0393 |
-| roc_auc | +0.0003 [-0.0070, +0.0075] | 0.9390 |
-| avg_precision | -0.0020 [-0.0189, +0.0149] | 0.8083 |
+| top1 | -0.0062 [-0.0191, +0.0066] | 0.3244 |
+| top2 | -0.0141 [-0.0268, -0.0015] | 0.0299 |
+| roc_auc | -0.0103 [-0.0158, -0.0048] | 0.0009 |
+| avg_precision | -0.0158 [-0.0282, -0.0033] | 0.0155 |
 
 **phys_gbm − gnn_huckel** — same features, different model class (paired over 20 splits)
 
 | metric | difference [95% CI] | p |
 |---|---|---|
-| top1 | +0.0160 [-0.0050, +0.0370] | 0.1267 |
-| top2 | +0.0423 [+0.0296, +0.0550] | 0.0000 |
-| roc_auc | +0.0164 [+0.0112, +0.0216] | 0.0000 |
-| avg_precision | +0.0399 [+0.0291, +0.0507] | 0.0000 |
+| top1 | +0.0157 [-0.0005, +0.0319] | 0.0567 |
+| top2 | +0.0379 [+0.0247, +0.0510] | 0.0000 |
+| roc_auc | +0.0185 [+0.0138, +0.0231] | 0.0000 |
+| avg_precision | +0.0427 [+0.0317, +0.0536] | 0.0000 |
 
 **phys_gbm − fp_gbm** — physics descriptors vs hashed environments (paired over 20 splits)
 
@@ -178,10 +178,89 @@ Paired t-tests on the per-split differences. Four metrics are tested per pair, s
 | roc_auc | +0.0937 [+0.0864, +0.1009] | 0.0000 |
 | avg_precision | +0.2842 [+0.2622, +0.3063] | 0.0000 |
 
+## The GNN hyperparameter search
+
+Selected on validation average precision. The test set plays no part in any row below. Trial 0 is the configuration used before tuning, so the search can only improve on it.
+
+**message-passing GNN, scaffold split** (full search, 12 configurations)
+
+| configuration | epochs | validation AP |
+|---|---|---|
+| lr=0.0003 | 58 | 0.5663 **<-** |
+| pos_weight=3.0 | 38 | 0.5649 |
+| dropout=0.1 | 54 | 0.5644 |
+| layers=2 | 36 | 0.5622 |
+| base (pre-tuning) | 45 | 0.5595 |
+| dropout=0.25 | 62 | 0.5591 |
+| hidden=128, layers=3, dropout=0.1, pos_weight=3.0 | 39 | 0.5582 |
+| weight_decay=0.001 | 45 | 0.5538 |
+| layers=3 | 40 | 0.5494 |
+| hidden=64 | 46 | 0.5453 |
+| lr=0.003 | 35 | 0.5435 |
+| hidden=64, layers=3, dropout=0.1, weight_decay=0.001 | 54 | 0.5416 |
+
+**message-passing GNN, random split** (shortlist search, 3 configurations)
+
+| configuration | epochs | validation AP |
+|---|---|---|
+| lr=0.0003 | 85 | 0.6241 **<-** |
+| pos_weight=3.0 | 47 | 0.6192 |
+| dropout=0.1 | 58 | 0.6097 |
+
+**GNN + Hückel features, scaffold split** (full search, 12 configurations)
+
+| configuration | epochs | validation AP |
+|---|---|---|
+| layers=2 | 34 | 0.5513 **<-** |
+| pos_weight=3.0 | 31 | 0.5495 |
+| hidden=128, layers=3, dropout=0.1, pos_weight=3.0 | 31 | 0.5476 |
+| lr=0.0003 | 38 | 0.5475 |
+| hidden=64, layers=3, dropout=0.1, weight_decay=0.001 | 29 | 0.5462 |
+| layers=3 | 32 | 0.5459 |
+| hidden=64 | 33 | 0.5449 |
+| weight_decay=0.001 | 35 | 0.5427 |
+| dropout=0.25 | 35 | 0.5421 |
+| base (pre-tuning) | 42 | 0.5420 |
+| dropout=0.1 | 31 | 0.5409 |
+| lr=0.003 | 33 | 0.5381 |
+
+**GNN + Hückel features, random split** (shortlist search, 3 configurations)
+
+| configuration | epochs | validation AP |
+|---|---|---|
+| layers=2 | 63 | 0.6079 **<-** |
+| hidden=128, layers=3, dropout=0.1, pos_weight=3.0 | 60 | 0.6061 |
+| pos_weight=3.0 | 48 | 0.5975 |
+
+**GNN + BDE, scaffold split** (full search, 12 configurations)
+
+| configuration | epochs | validation AP |
+|---|---|---|
+| hidden=64 | 42 | 0.6093 **<-** |
+| layers=2 | 41 | 0.6077 |
+| hidden=128, layers=3, dropout=0.1, pos_weight=3.0 | 41 | 0.6039 |
+| lr=0.0003 | 41 | 0.6007 |
+| dropout=0.25 | 38 | 0.5996 |
+| hidden=64, layers=3, dropout=0.1, weight_decay=0.001 | 39 | 0.5995 |
+| lr=0.003 | 34 | 0.5990 |
+| pos_weight=3.0 | 33 | 0.5983 |
+| dropout=0.1 | 34 | 0.5978 |
+| layers=3 | 38 | 0.5963 |
+| weight_decay=0.001 | 33 | 0.5955 |
+| base (pre-tuning) | 33 | 0.5913 |
+
+**GNN + BDE, random split** (shortlist search, 3 configurations)
+
+| configuration | epochs | validation AP |
+|---|---|---|
+| hidden=128, layers=3, dropout=0.1, pos_weight=3.0 | 58 | 0.6113 **<-** |
+| hidden=64 | 80 | 0.6038 |
+| layers=2 | 49 | 0.5898 |
+
 ## Split diagnostics (seed 0)
 
 | mode | test molecules | shared scaffolds | median NN Tanimoto | frac. test with NN > 0.6 |
 |---|---|---|---|---|
-| random | 136 | 34 | 0.491 | 0.368 |
 | scaffold | 136 | 0 | 0.343 | 0.103 |
+| random | 136 | 34 | 0.491 | 0.368 |
 

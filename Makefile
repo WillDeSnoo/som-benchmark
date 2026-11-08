@@ -1,6 +1,12 @@
 PY ?= python
 SEEDS ?= 10
 
+# Worker processes for the GNN hyperparameter search. Each fit is
+# single-threaded and independent, so this affects wall-clock time only --
+# the chosen configuration and every reported number are identical at any
+# value. Set JOBS=1 on a small machine.
+JOBS ?= 4
+
 .PHONY: all env data bde smartcyp curate evaluate analyse figures report test clean clean-results help
 
 help:
@@ -18,6 +24,7 @@ help:
 	@echo "  make all       data -> curate -> bde -> evaluate -> analyse -> figures -> report"
 	@echo ""
 	@echo "override the repeat count with e.g.  make evaluate SEEDS=3"
+	@echo "override the search parallelism with   make evaluate JOBS=1"
 
 all: data curate bde evaluate analyse figures report
 
@@ -49,7 +56,7 @@ smartcyp:
 	$(PY) scripts/08_smartcyp.py --jar $(SMARTCYP_JAR)
 
 evaluate:
-	$(PY) scripts/03_evaluate.py --seeds $(SEEDS)
+	$(PY) scripts/03_evaluate.py --seeds $(SEEDS) --jobs $(JOBS)
 
 analyse:
 	$(PY) scripts/04_analyse.py --seeds $(SEEDS)

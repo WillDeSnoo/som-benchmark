@@ -45,13 +45,13 @@ The scaffold split is the one to read first.
 | approach | top-1 | top-2 | ROC-AUC | avg precision | ECE |
 |---|---|---|---|---|---|
 | atom-type frequency | 0.425 [0.402, 0.448] | 0.607 [0.583, 0.631] | 0.802 [0.790, 0.814] | 0.274 | 0.025 |
-| SMARTCyp (external, untrained) | 0.635 [0.607, 0.663] | 0.770 [0.744, 0.795] | 0.826 [0.812, 0.840] | 0.338 | 0.023 |
+| SMARTCyp (external, untrained) | 0.635 [0.607, 0.663] | 0.770 [0.744, 0.795] | 0.826 [0.812, 0.840] | 0.341 | 0.018 |
 | fingerprint + GBM | 0.601 [0.568, 0.635] | 0.741 [0.721, 0.760] | 0.871 [0.865, 0.878] | 0.499 | 0.018 |
 | Hückel physics + GBM | 0.660 [0.626, 0.695] | 0.811 [0.787, 0.834] | 0.887 [0.876, 0.899] | 0.531 | 0.019 |
-| **Hückel + BDE + GBM** | **0.674 [0.650, 0.698]** | **0.812 [0.789, 0.834]** | **0.907 [0.899, 0.915]** | **0.580** | 0.018 |
-| message-passing GNN | 0.642 [0.611, 0.673] | 0.785 [0.762, 0.808] | 0.873 [0.862, 0.884] | 0.501 | 0.032 |
-| GNN + Hückel features | 0.644 [0.618, 0.671] | 0.768 [0.747, 0.789] | 0.872 [0.863, 0.880] | 0.501 | 0.028 |
-| GNN + BDE | 0.623 [0.583, 0.663] | 0.770 [0.747, 0.794] | 0.877 [0.867, 0.886] | 0.511 | 0.033 |
+| **Hückel + BDE + GBM** | **0.674 [0.650, 0.698]** | **0.812 [0.789, 0.834]** | **0.907 [0.899, 0.915]** | **0.584** | 0.019 |
+| message-passing GNN (tuned) | 0.643 [0.615, 0.670] | 0.788 [0.771, 0.804] | 0.880 [0.869, 0.891] | 0.504 | 0.026 |
+| GNN + Hückel features (tuned) | 0.640 [0.617, 0.663] | 0.770 [0.746, 0.794] | 0.868 [0.861, 0.875] | 0.487 | 0.028 |
+| GNN + BDE (tuned) | 0.623 [0.587, 0.658] | 0.778 [0.751, 0.805] | 0.882 [0.872, 0.891] | 0.521 | 0.026 |
 
 ![Model comparison](figures/fig1_model_comparison.png)
 
@@ -60,8 +60,8 @@ is much more sensitive than eyeballing overlapping intervals. Full tables in
 [results/summary.md](results/summary.md); the ones that matter are below.
 
 **SMARTCyp, which does no learning at all, beats two of the six models.** At
-0.635 top-1 it is ahead of the fingerprint GBM (0.601) and level with the GNN
-(0.642), using nothing but tabulated DFT activation energies and a SMARTS match
+0.635 top-1 it is ahead of the fingerprint GBM (0.601) and of GNN + BDE
+(0.623), and level with the tuned GNN (0.643), using nothing but tabulated DFT activation energies and a SMARTS match
 — no training data touched. The best model here beats it by +0.058 top-1
 [+0.036, +0.080], which is real but not large. Anyone presenting a trained SOM
 model without this comparison is omitting the number that matters most.
@@ -92,43 +92,44 @@ A modest top-1 gain and a solid one in atom-level ranking. This is the one
 addition that brought in information from outside the dataset, and it is the
 only feature set that improved on the Hückel descriptors.
 
-**But the GNN cannot use either descriptor set — and that is the most
-informative result here.** Giving the GNN the identical feature set `phys_gbm`
-uses changes essentially nothing:
+**But extra node features make the GNN *worse*, not better — and that is the
+most informative result here.** Giving the GNN the identical feature set
+`phys_gbm` uses, with both sides independently tuned:
 
 | gnn_huckel − gnn | difference [95% CI] | p |
 |---|---|---|
-| top-1 | +0.002 [−0.012, +0.016] | 0.80 |
-| top-2 | −0.016 [−0.031, −0.001] | 0.039 |
-| ROC-AUC | +0.0003 [−0.007, +0.008] | 0.94 |
-| avg precision | −0.002 [−0.019, +0.015] | 0.81 |
+| top-1 | −0.006 [−0.019, +0.007] | 0.32 |
+| top-2 | −0.014 [−0.027, −0.002] | 0.030 |
+| ROC-AUC | −0.010 [−0.016, −0.005] | 0.0009 |
+| avg precision | −0.016 [−0.028, −0.003] | 0.016 |
 
-Three of four metrics are flat and the fourth is slightly *negative* (and with
-four metrics tested, a single p just under 0.05 is weak evidence). So the
-message-passing network was already extracting whatever the Hückel descriptors
-encode. That is not surprising on reflection — frontier densities and free
-valence are functions of the molecular graph, and message passing over that
-graph is exactly the operation that can approximate them. The physics and the
-learned representation carry the **same information**, not complementary
-information.
+Three of four metrics are *negative*, and the two ranking metrics clearly so.
+The transferred BDEs do the same thing — `gnn_bde − gnn` is −0.025 top-1
+[−0.039, −0.011], p = 0.001 — even though those same features clearly helped
+the GBM.
 
-The BDE features behave the same way in the GNN — `gnn_bde − gnn` is null on
-all four metrics (top-1 −0.014, p = 0.13; ROC-AUC +0.002, p = 0.54) — even
-though those same features clearly helped the GBM. So this is not simply "the
-descriptors were redundant": the identical features add signal to one model
-class and nothing to the other. The GNN appears unable to exploit extra node
-features at this data size, which is a statement about having 679 molecules,
-not about the features.
+So the earlier reading, that the physics and the learned representation carry
+the same information, was too kind. Twenty-one extra node features, which a
+boosted-tree model turns into its best result, cost this GNN about a point of
+top-2 and a point of AUC. The straightforward explanation is capacity against
+sample size: at 679 molecules a 400k-parameter network given a wider input has
+more ways to fit the training set and no more evidence to constrain it. The
+identical features add signal to one model class and subtract it from the
+other.
+
+This now rests on a tuned comparison rather than a default one — each variant
+got its own search, described [below](#the-gnn-hyperparameter-search), so it is
+not an artifact of the plain GNN having been luckier with its hyperparameters.
 
 **Which means the Hückel model's advantage is not about chemistry at all — it is
 about model class.** On *identical* features, gradient boosting beats the GNN:
 
 | phys_gbm − gnn_huckel | difference [95% CI] | p |
 |---|---|---|
-| top-1 | +0.016 [−0.005, +0.037] | 0.13 |
-| top-2 | +0.042 [+0.030, +0.055] | <0.0001 |
-| ROC-AUC | +0.016 [+0.011, +0.022] | <0.0001 |
-| avg precision | +0.040 [+0.029, +0.051] | <0.0001 |
+| top-1 | +0.016 [−0.001, +0.032] | 0.057 |
+| top-2 | +0.038 [+0.025, +0.051] | <0.0001 |
+| ROC-AUC | +0.019 [+0.014, +0.023] | <0.0001 |
+| avg precision | +0.043 [+0.032, +0.054] | <0.0001 |
 
 Same inputs, same splits, same labels; the only difference is the estimator. At
 679 molecules a boosted-tree ensemble fits this problem better than a
@@ -137,9 +138,10 @@ beats deep learning" — it is that at this data scale the tabular model is the
 better estimator, and the hand-built descriptors are a cheap, interpretable,
 and apparently sufficient way to hand it the relevant structure.
 
-This also sharpens the earlier caveat rather than removing it: the GNN is
-data-limited and under-tuned relative to the GBMs, and nothing here says the
-ordering would survive at 10,000 molecules.
+The GNN is no longer under-tuned relative to the GBMs — that caveat has been
+discharged, and discharging it did not change the ordering. What remains is the
+data-limited caveat: nothing here says this ordering would survive at 10,000
+molecules.
 
 The descriptors are also readable, which the GNN's are not. A logistic
 regression on the same features (fitted only to be read, never used for
@@ -162,30 +164,110 @@ adds +0.250 top-1 over it, and even SMARTCyp adds +0.210 [+0.185, +0.235]. Large
 unambiguous gains — and the correct denominator: a paper reporting 0.67 without
 this row is reporting something much less impressive than it sounds.
 
-**The scaffold split barely costs anything — which was not what I expected.**
+**The scaffold split costs little, but not nothing — and this is one claim the
+GNN tuning changed.**
 
 | approach | random | scaffold | gap [95% CI] |
 |---|---|---|---|
 | atom-type frequency | 0.419 | 0.425 | −0.006 [−0.037, +0.025] |
+| SMARTCyp (untrained) | 0.629 | 0.635 | −0.006 [−0.042, +0.030] |
 | fingerprint + GBM | 0.622 | 0.601 | +0.021 [−0.022, +0.063] |
 | Hückel physics + GBM | 0.684 | 0.660 | +0.024 [−0.011, +0.058] |
-| message-passing GNN | 0.667 | 0.642 | +0.025 [−0.011, +0.062] |
+| **Hückel + BDE + GBM** | 0.706 | 0.674 | **+0.032 [+0.001, +0.063]** |
+| **message-passing GNN** | 0.682 | 0.643 | **+0.040 [+0.009, +0.070]** |
+| **GNN + Hückel features** | 0.673 | 0.640 | **+0.033 [+0.004, +0.062]** |
+| GNN + BDE | 0.652 | 0.623 | +0.030 [−0.010, +0.070] |
 
-Every interval includes zero. The split is genuinely doing its job — zero shared
-scaffolds, and median nearest-neighbour Tanimoto drops from 0.49 to 0.34 — so
-this is not a broken split. The likelier reading is that the task is *local*:
-whether a given carbon is oxidised depends on its immediate electronic and
-steric environment, and those environments recur across scaffolds. Holding out a
-scaffold removes the molecule but not the chemistry. That is a useful thing to
-know, and it argues that for atom-level endpoints a scaffold split is a weaker
-test of generalisation than it is for whole-molecule endpoints.
+An earlier version of this README said every interval included zero. That is no
+longer true: three of the eight now exclude it, including the best model and the
+tuned GNN. The direction was always the same and the magnitude has barely moved
+— what changed is that the tuned GNN is better on the random split (0.667 →
+0.682) without being better on the scaffold split, which widens its gap into
+significance. I am flagging the revision rather than quietly restating it,
+because "the scaffold split is free" was the more striking claim and it did not
+survive.
 
-**Probabilities are reasonably trustworthy**, with ECE between 0.018 and 0.032
+Read it as a gradient rather than a threshold. The two models that learn nothing
+about context — the frequency reference and SMARTCyp — pay nothing, because
+their knowledge is per-atom-type and a new scaffold does not change what a
+benzylic carbon is. The models that do learn context pay 2–4 points. The split is
+genuinely doing its job (zero shared scaffolds; median nearest-neighbour
+Tanimoto drops from 0.49 to 0.34), so the small size of the penalty is still the
+interesting part: the task is largely *local*, whether a given carbon is
+oxidised depends on its immediate electronic and steric environment, and those
+environments recur across scaffolds. Holding out a scaffold removes the molecule
+but mostly not the chemistry. For atom-level endpoints a scaffold split is a
+weaker test of generalisation than it is for whole-molecule endpoints — but it
+is not a free one.
+
+**Probabilities are reasonably trustworthy**, with ECE between 0.018 and 0.028
 and mild overconfidence in the highest bin — the top-bin atoms are predicted at
 0.55–0.62 and come true about 0.49–0.54 of the time. Isotonic recalibration on
 the validation split changes little, which is the good case.
 
 ![Calibration](figures/fig5_calibration.png)
+
+### The GNN hyperparameter search
+
+The GNN was the only model running a single fixed configuration, and two
+conclusions above depend on it underperforming, so it needed a real search
+before those conclusions could be trusted. Twelve configurations per variant —
+width, depth, learning rate, dropout, weight decay and positive-class weight —
+selected on validation average precision, with each GNN variant searched
+independently so the ablations compare equally-tuned models. Every trial is in
+[results/gnn_tuning.csv](results/gnn_tuning.csv).
+
+**The search found nothing.** Across 24 paired before/after comparisons (three
+variants × two splits × four metrics) the chosen configurations are
+indistinguishable from the configuration they replaced:
+
+| | top-1 before → after | difference | p |
+|---|---|---|---|
+| GNN, scaffold | 0.642 → 0.643 | +0.001 [−0.018, +0.020] | 0.91 |
+| GNN + Hückel, scaffold | 0.644 → 0.640 | −0.004 [−0.019, +0.010] | 0.50 |
+| GNN + BDE, scaffold | 0.623 → 0.623 | −0.001 [−0.028, +0.027] | 0.95 |
+
+Two of the 24 reach nominal significance, both of them the plain GNN on the
+random split (top-1 +0.016, p = 0.046; ROC-AUC +0.010, p = 0.020). Two in 24 is
+what 24 tests produce by chance, so I am not claiming them.
+
+![The GNN search](figures/fig6_gnn_tuning.png)
+
+This is a negative result worth more than a positive one would have been: the
+GNN's weakness is not a tuning artifact, so "at this data size the boosted trees
+are the better estimator" stands on a fair comparison.
+
+**Why the measurement needed fixing first.** A single GNN fit turned out to be a
+noisy estimate of a configuration's quality, for an uninteresting reason:
+`index_add_` accumulating messages across several CPU threads sums in a
+nondeterministic order, and that rounding difference compounds through training.
+Repeated fits of the *same* configuration at the *same* seed differed by 0.013
+validation AP — **larger than the genuine seed-to-seed spread of 0.009**, and
+the same size as the gaps between neighbouring grid points. A conventional
+one-fit-per-configuration search would have been selecting partly on thread
+scheduling.
+
+Two changes followed. The GNN is now pinned to one thread, which makes a fit
+bit-exact and costs almost nothing: these graphs are small enough that threading
+barely helps, measured at 2.00 s/epoch on one thread against 1.86 s on eight and
+1.53 s on two — eight is *slower* than two, because thread overhead dominates
+the small matrix multiplies. And each configuration is fitted three times and
+scored on the mean, with the spread recorded.
+
+That spread is why the result reads as "found nothing" rather than "found
+something". The winning configuration beat the pre-tuning default by +0.007
+(plain GNN), +0.009 (+Hückel) and +0.018 (+BDE) validation AP, against a
+per-configuration spread of ±0.013–0.014. **Every winner's margin sits inside
+the noise.** With one fit per configuration I would have reported a search that
+found a real improvement, and been wrong. The figure above plots those ranges
+for exactly this reason: where they overlap, the ranking of configurations is
+not a ranking.
+
+One consequence to state: the search picked a *different* configuration from the
+default in all six cases (lower learning rate for the plain GNN, two layers for
+the Hückel variant, narrower or regularized for the BDE variant), so the null
+result is not "it re-chose the default". Different configurations, same
+performance.
 
 ### Where it fails
 
@@ -440,13 +522,29 @@ and the metric edge cases:
 make test
 ```
 
-`make evaluate` takes roughly 1.5 hours on a laptop CPU, almost all of it in the
-fingerprint model's 1024-feature gradient boosting and the GNN's 20 trainings.
-Use `make evaluate SEEDS=3` for a quick pass.
+`make evaluate` takes roughly 4 hours on a laptop CPU with `JOBS=4`, most of it
+in the GNN hyperparameter search (135 fits) and the GNN's 60 trainings. Use
+`make evaluate SEEDS=3` for a quick pass.
+
+`JOBS` sets the worker count for the GNN search only. Because every GNN fit is
+single-threaded and independent of the others, this changes wall-clock time and
+nothing else — the chosen configuration and every reported number are identical
+at any value, which is checked rather than assumed. `JOBS=1` keeps everything in
+one process. The search is the one stage that parallelises; the per-seed
+trainings are still serial.
 
 ---
 
 ## Implementation notes
+
+**The GNN is deliberately single-threaded** (`som.models._GNN_THREADS`). Running
+`index_add_` over several CPU threads accumulates messages in a nondeterministic
+order, which made repeated fits of one configuration differ by more than the
+differences the hyperparameter search was trying to measure. One thread is
+bit-exact and costs ~16% wall time on graphs this small, and it is what makes
+the search parallelisable across processes instead of threads. The reasoning and
+the measurements are in that module's comments and in
+[the search section](#the-gnn-hyperparameter-search).
 
 **Simple Hückel from scratch** (`src/som/huckel.py`). One p orbital per
 conjugated atom, heteroatoms via the standard Streitwieser h/k parameters,
@@ -525,42 +623,64 @@ Stated plainly, because they bound what these numbers support:
   to ~0.6 kcal/mol against its own DFT level, and 18 of 679 molecules fall
   outside its stated applicability domain (flagged as a feature column). A real
   DFT or UMA calculation on these molecules would be the stronger version.
-- **Modest scale.** 679 molecules is small. The GNN in particular is almost
-  certainly data-limited rather than architecture-limited, and the fact that it
-  does not beat ~60 hand-built descriptors should be read that way rather than
-  as a claim about graph networks.
+- **Modest scale.** 679 molecules is small. The GNN in particular is
+  data-limited rather than architecture-limited — a twelve-point search moved it
+  nowhere — and the fact that it does not beat ~60 hand-built descriptors should
+  be read that way rather than as a claim about graph networks.
 - **The Hückel parameters for P and Se are rough analogues**, not fitted values,
   and are flagged as such in the code.
-- **Hyperparameter search is small** — a four-point grid for the gradient
-  boosting models and a single fixed configuration for the GNN. The GNN is the
-  most likely to be under-tuned, so its row should be read as a reasonable
-  default rather than its ceiling.
+- **The hyperparameter searches are coarse.** Four configurations for the
+  gradient boosting models, twelve for each GNN variant. The GNN grid is a set
+  of one-at-a-time moves away from a sensible default plus two combinations, not
+  a factorial or a Bayesian search, and I deliberately left out the
+  upward-capacity moves (`hidden=256`, `layers=6`) to afford three repeats per
+  configuration. So "the search found no improvement" is a claim about this
+  search, not a proof that no better configuration exists. Given that the
+  twelve points explored include the axes most likely to matter at this sample
+  size, and that none separated from the default by more than the noise, I would
+  be surprised by a large gain — but a wider search is the honest way to settle
+  it.
+- **The before/after tuning comparison conflates two changes.** The pre-tuning
+  numbers were produced multithreaded and so were not exactly reproducible; the
+  tuned numbers are single-threaded. Both configurations were chosen without
+  touching the test set, so the comparison is sound as "old pipeline against new
+  pipeline", but it is not a pure hyperparameter effect.
+- **The random-split searches used a shortlist.** Each variant got a full
+  twelve-point search on the scaffold split and then only the top three of those
+  on the random split, to keep the cost to ~2 h. One side effect: the
+  pre-tuning default was not among the top three for any variant, so it was
+  never re-evaluated on the random split.
 
 ## What I would do next
 
 In rough order of what would most change the conclusions:
 
-1. **A proper hyperparameter search for the GNN.** Two results now hinge on the
-   GNN failing to use features the GBM used well, and it is the only model that
-   got a single fixed configuration. That asymmetry has to be closed before the
-   "different model class" reading is safe.
-2. **An external test set**, and comparisons against FAME3 and XenoSite
-   alongside SMARTCyp.
-3. **3D steric accessibility from UMA-optimised geometries.** The single
+1. **An external test set**, and comparisons against FAME3 and XenoSite
+   alongside SMARTCyp. This is now clearly the top item: every number here is
+   an internal estimate, and SMARTCyp gives an external method but not an
+   external dataset.
+2. **3D steric accessibility from UMA-optimised geometries.** The single
    largest failure class, aromatic C–H hydroxylation at 0.36, is one where the
    candidate positions are near-electronically-equivalent and sterics decide.
    No electronic descriptor, Hückel or DFT, can separate them; this is the one
    remaining idea that attacks that failure directly.
-4. **Treating unlabelled atoms as positive-unlabelled** rather than as
+3. **Treating unlabelled atoms as positive-unlabelled** rather than as
    negatives.
-5. **An ensemble of the frequency reference with a learned model**, given how
+4. **An ensemble of the frequency reference with a learned model**, given how
    badly the learned models lose on sulfur and methyl sites.
+5. **A GNN trained on more data than this.** Not a wider search on these 679
+   molecules — that was tried and moved nothing. The informative experiment is
+   pre-training on a larger metabolism or reactivity corpus and fine-tuning
+   here, which tests the data-limited explanation directly instead of assuming
+   it.
 
-Two items that used to be on this list — the GNN-with-Hückel ablation and the
-SMARTCyp baseline — are now done, and both changed the conclusions. Real DFT
-single points for ALIE and condensed Fukui functions remain untried; given that
-transferred BDEs helped the GBM but nothing helped the GNN, the expected value
-is moderate and the cost is a cluster run.
+Three items that used to be on this list — the GNN-with-Hückel ablation, the
+SMARTCyp baseline, and a proper GNN hyperparameter search — are now done. The
+first two changed the conclusions; the third confirmed one, which is the less
+exciting outcome and the more useful one. Real DFT single points for ALIE and
+condensed Fukui functions remain untried; given that transferred BDEs helped the
+GBM and actively hurt the GNN, the expected value is moderate and the cost is a
+cluster run.
 
 ---
 

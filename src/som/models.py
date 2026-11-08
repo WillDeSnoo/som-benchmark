@@ -24,7 +24,9 @@
     PyTorch to avoid a PyTorch Geometric dependency. It gets only basic atom
     and bond features, *not* the Hückel descriptors, so that "learned
     representation" is compared against "hand-built physics" rather than
-    quietly containing it.
+    quietly containing it. Width, depth, learning rate, dropout, weight decay
+    and positive-class weight are searched; each GNN variant gets its own
+    search, so the ablations below compare equally-tuned models.
 
 ``gnn_huckel``
     The same network given exactly the feature set ``phys_gbm`` uses, Hückel
@@ -40,6 +42,13 @@
 
 Hyperparameters are chosen on the validation split of the first seed only and
 then reused for every later seed. The test set is never touched by tuning.
+
+The GBM and the GNN get the same protocol but not the same budget. The GBM has
+four configurations and one fit each; the GNN has twelve and three fits each,
+because a single GNN fit is a noisy measurement of a configuration's quality
+(see ``_GNN_TUNE_REPEATS``) while a GBM fit at a fixed seed is not. Both search
+on validation average precision. The search is written out to
+results/gnn_tuning.csv so that it can be read rather than taken on trust.
 """
 
 from __future__ import annotations
@@ -83,6 +92,83 @@ _GBM_GRID = [
     {"learning_rate": 0.10, "max_leaf_nodes": 63},
 ]
 
+#: Coarse search space for the GNN. The first entry is the configuration used
+#: before any tuning was done, so the search can only improve on it (on the
+#: validation split, which is what it selects on).
+#:
+#: It is a hand-chosen path through the space rather than a full factorial:
+#: one-at-a-time moves away from the base along each axis that plausibly
+#: matters at 679 molecules, plus two combinations of the moves that small-data
+#: graph models usually want together (smaller, shallower, regularized). A full
+#: factorial over these six axes would be a few hundred fits at ~90 s each,
+#: times ``_GNN_TUNE_REPEATS``, times three variants and two split modes.
+#:
+#: Capacity (``hidden``, ``layers``) and regularization (``dropout``,
+#: ``weight_decay``) are the axes expected to matter; ``pos_weight`` is here
+#: because ~10% of atoms are positive and the original loss ignored that.
+#: Moves *upward* in capacity (``hidden`` 256, ``layers`` 6) were left out:
+#: they are the most expensive fits and the least likely to help a model that
+#: is already the weaker estimator on this sample size, so the budget went to
+#: repeats instead. That is a stated limit of the search, not a finding.
+_GNN_GRID = [
+    {},                                                    # the former default
+    {"hidden": 64},
+    {"layers": 2},
+    {"layers": 3},
+    {"lr": 3e-4},
+    {"lr": 3e-3},
+    {"dropout": 0.1},
+    {"dropout": 0.25},
+    {"weight_decay": 1e-3},
+    {"pos_weight": 3.0},
+    {"hidden": 64, "layers": 3, "dropout": 0.1, "weight_decay": 1e-3},
+    {"hidden": 128, "layers": 3, "dropout": 0.1, "pos_weight": 3.0},
+]
+
+#: Threads for a GNN fit. One, deliberately.
+#:
+#: `index_add_` over several CPU threads accumulates in a nondeterministic
+#: order, and those rounding differences grow through training into validation
+#: scores that differ by ~0.013 AP between repeats of the *same* configuration
+#: at the *same* seed -- larger than the genuine seed-to-seed spread (~0.009)
+#: and comparable to the gaps between neighbouring grid points. A search run
+#: that way is partly a search over thread scheduling.
+#:
+#: Single-threaded is bit-exact, and on this workload it costs almost nothing:
+#: the graphs are small enough that threading barely helps, measured at
+#: 2.00 s/epoch on one thread against 1.86 s on eight and 1.53 s on two (eight
+#: is slower than two -- thread overhead dominates the small matmuls). Paying
+#: ~16% wall time for an exactly reproducible model is worth it, and a
+#: one-thread fit also leaves the rest of the machine free.
+_GNN_THREADS = 1
+
+#: Each configuration is fitted this many times, with different torch seeds,
+#: and scored on the mean validation AP. One fit is not a reliable measurement:
+#: `index_add_` over several CPU threads accumulates in a nondeterministic
+#: order, and the initialization differs too, so repeated fits of the *same*
+#: configuration vary by an amount comparable to the gaps between neighbouring
+#: configurations. Selecting the argmax over single fits would partly be
+#: selecting that noise. See results/gnn_tuning.csv for the per-trial spread.
+_GNN_TUNE_REPEATS = 3
+
+#: The split mode that gets the full search. The other mode is searched over a
+#: shortlist of the configurations that did best here, which keeps the cost to
+#: roughly a third of a full search while still letting the two modes disagree.
+_GNN_PRIMARY_MODE = "scaffold"
+_GNN_SHORTLIST_N = 3
+
+#: Worker processes for the search. Because every fit is single-threaded and
+#: self-contained, running them concurrently cannot change any result -- it is
+#: purely a wall-clock choice, and the chosen configuration is identical at
+#: any value. 1 keeps everything in this process; stage 3 raises it.
+_GNN_TUNE_JOBS = 1
+
+#: every (model, mode, config) trial and its validation AP, for the record
+GNN_TRIALS: list[dict] = []
+
+#: shortlists carried from the primary mode, keyed by model name
+_GNN_SHORTLIST: dict[str, list[dict]] = {}
+
 
 def get_table(kind: str, instances: list[dict], label_field: str) -> AtomTable:
     key = (kind, label_field)
@@ -94,6 +180,8 @@ def get_table(kind: str, instances: list[dict], label_field: str) -> AtomTable:
 def clear_caches() -> None:
     _TABLE_CACHE.clear()
     _TUNED.clear()
+    _GNN_SHORTLIST.clear()
+    GNN_TRIALS.clear()
 
 
 @dataclass
@@ -359,7 +447,17 @@ def _graph_cache(instances: list[dict], kind: str = "graph"):
     return cache
 
 
-def _build_mpnn(n_node_feat: int, n_edge_feat: int, n_iso: int, hidden: int, layers: int):
+def _build_mpnn(
+    n_node_feat: int, n_edge_feat: int, n_iso: int, hidden: int, layers: int,
+    dropout: float = 0.0,
+):
+    """Residual message-passing network.
+
+    ``dropout`` is applied to the residual update and inside the read-out head,
+    not to the aggregated messages themselves: dropping messages would make the
+    effective neighbourhood of an atom random, which is a different (and for
+    this task worse) kind of regularization than dropping hidden units.
+    """
     import torch
     from torch import nn
 
@@ -371,7 +469,8 @@ def _build_mpnn(n_node_feat: int, n_edge_feat: int, n_iso: int, hidden: int, lay
                 nn.Linear(hidden, hidden),
             )
             self.upd = nn.Sequential(
-                nn.Linear(2 * hidden, hidden), nn.ReLU(), nn.Linear(hidden, hidden)
+                nn.Linear(2 * hidden, hidden), nn.ReLU(),
+                nn.Dropout(dropout), nn.Linear(hidden, hidden),
             )
             self.norm = nn.LayerNorm(hidden)
 
@@ -387,7 +486,8 @@ def _build_mpnn(n_node_feat: int, n_edge_feat: int, n_iso: int, hidden: int, lay
             self.iso = nn.Embedding(n_iso, hidden)
             self.layers = nn.ModuleList(Layer() for _ in range(layers))
             self.head = nn.Sequential(
-                nn.Linear(hidden, hidden), nn.ReLU(), nn.Linear(hidden, 1)
+                nn.Linear(hidden, hidden), nn.ReLU(),
+                nn.Dropout(dropout), nn.Linear(hidden, 1),
             )
 
         def forward(self, x, src, dst, edge, iso_idx):
@@ -447,6 +547,9 @@ def _fit_gnn(
     batch_size: int = 32,
     lr: float = 1e-3,
     patience: int = 20,
+    dropout: float = 0.0,
+    weight_decay: float = 1e-5,
+    pos_weight: float = 1.0,
 ) -> Prediction:
     import torch
     from torch import nn
@@ -455,7 +558,7 @@ def _fit_gnn(
 
     torch.manual_seed(seed)
     np.random.seed(seed)
-    torch.set_num_threads(max(1, min(8, torch.get_num_threads())))
+    torch.set_num_threads(_GNN_THREADS)
 
     work = [dict(r) for r in instances]
     for r in work:
@@ -466,10 +569,16 @@ def _fit_gnn(
     n_node = next(iter(cache.values()))["x"].shape[1]
     n_edge = next(iter(cache.values()))["edge"].shape[1]
 
-    model = _build_mpnn(n_node, n_edge, len(ISOFORMS), hidden, layers)
-    opt = torch.optim.AdamW(model.parameters(), lr=lr, weight_decay=1e-5)
+    model = _build_mpnn(n_node, n_edge, len(ISOFORMS), hidden, layers, dropout)
+    opt = torch.optim.AdamW(model.parameters(), lr=lr, weight_decay=weight_decay)
     sched = torch.optim.lr_scheduler.ReduceLROnPlateau(opt, factor=0.5, patience=8)
-    lossf = nn.BCEWithLogitsLoss()
+    # pos_weight > 1 up-weights the ~10% of atoms that are sites. It changes the
+    # probability scale (and so the Brier score and ECE), but recalibration on
+    # the validation split is monotone and absorbs most of that, so it mainly
+    # affects where the model spends its capacity.
+    lossf = nn.BCEWithLogitsLoss(
+        pos_weight=torch.tensor(float(pos_weight)) if pos_weight != 1.0 else None
+    )
 
     # standardize node features using TRAIN molecules only
     train_mols = {work[i]["smiles"] for i in split.train_inst}
@@ -487,7 +596,9 @@ def _fit_gnn(
     rng = np.random.default_rng(seed)
     best_score, best_state, since = -np.inf, None, 0
 
+    epochs_run = 0
     for _ in range(epochs):
+        epochs_run += 1
         model.train()
         order = rng.permutation(len(train_ids))
         for s in range(0, len(order), batch_size):
@@ -544,13 +655,152 @@ def _fit_gnn(
         inst_val=val_batch["inst"],
         chosen_params={
             "hidden": hidden, "layers": layers, "lr": lr,
-            "batch_size": batch_size, "node_kind": node_kind,
+            "batch_size": batch_size, "dropout": dropout,
+            "weight_decay": weight_decay, "pos_weight": pos_weight,
+            "node_kind": node_kind,
             "n_node_features": int(n_node),
+            "epochs_run": int(epochs_run),
             "best_val_ap": float(best_score),
         },
         n_train_atoms=int(sum(cache[work[i]["smiles"]]["x"].shape[0]
                               for i in split.train_inst)),
     )
+
+
+def _worker_init() -> None:
+    """Keep a worker to one thread, including inside the BLAS libraries.
+
+    `_fit_gnn` sets the torch thread count itself, but BLAS reads its
+    environment at import, which has already happened by then.
+    """
+    import os
+
+    for var in ("OMP_NUM_THREADS", "MKL_NUM_THREADS",
+                "OPENBLAS_NUM_THREADS", "VECLIB_MAXIMUM_THREADS"):
+        os.environ[var] = "1"
+
+
+def _gnn_trial(task):
+    """One fit, as a picklable top-level function for the process pool."""
+    instances, split, label_field, seed, node_kind, name, params = task
+    pred = _fit_gnn(
+        instances, split, label_field, seed,
+        node_kind=node_kind, name=name, **params,
+    )
+    return (
+        float(pred.chosen_params["best_val_ap"]),
+        int(pred.chosen_params["epochs_run"]),
+    )
+
+
+def _run_trials(tasks: list) -> list:
+    """Fit every (configuration, repeat) task, in parallel if asked.
+
+    The caller's entry point must be guarded by ``if __name__ ==
+    "__main__":``. That is the documented requirement of the ``spawn`` start
+    method, which is the default on macOS: each worker re-imports the main
+    module, so an unguarded script re-runs itself in every worker. Stage 3 is
+    guarded (and ``test_stage_3_is_guarded_for_spawn`` keeps it that way).
+
+    Falls back to running in this process if the pool cannot be created, since
+    a search that is merely slow is much better than one that does not run.
+    The results are identical either way -- each fit is single-threaded and
+    independent of the others.
+    """
+    if _GNN_TUNE_JOBS <= 1 or len(tasks) < 2:
+        return [_gnn_trial(t) for t in tasks]
+    from concurrent.futures import ProcessPoolExecutor
+    try:
+        with ProcessPoolExecutor(
+            max_workers=_GNN_TUNE_JOBS, initializer=_worker_init
+        ) as ex:
+            return list(ex.map(_gnn_trial, tasks))
+    except Exception as exc:  # noqa: BLE001
+        first = str(exc).strip().splitlines()[0] if str(exc).strip() else exc
+        print(f"    parallel search unavailable, running serially: {first}")
+        print("    (if this mentions bootstrapping, the calling script is "
+              "missing its `if __name__ == \"__main__\":` guard)")
+        return [_gnn_trial(t) for t in tasks]
+
+
+def _tune_gnn(
+    name: str,
+    node_kind: str,
+    instances: list[dict],
+    split: Split,
+    label_field: str,
+) -> dict:
+    """Pick GNN hyperparameters on the validation split, once per (model, mode).
+
+    Selection is on validation average precision only. Every trial does compute
+    test predictions, because the trial reuses ``_fit_gnn`` unchanged rather
+    than a second near-copy of the training loop, but those predictions are
+    discarded here and never enter the choice. The returned configuration is
+    then refitted per seed in the normal way.
+
+    Each GNN variant gets its own full search in the primary mode, so the
+    ablations (``gnn_huckel`` against ``gnn``, ``gnn_bde`` against ``gnn``) are
+    comparisons between equally-tuned models rather than between a tuned model
+    and a default one.
+    """
+    key = (name, split.mode)
+    if key in _TUNED:
+        return _TUNED[key]
+
+    if split.mode == _GNN_PRIMARY_MODE or name not in _GNN_SHORTLIST:
+        grid = _GNN_GRID
+        scope = "full"
+    else:
+        grid = _GNN_SHORTLIST[name]
+        scope = "shortlist"
+
+    # the same set of torch seeds for every configuration, so that the
+    # comparison is between configurations and not between seed draws
+    tasks = [
+        (instances, split, label_field, rep, node_kind, name, params)
+        for params in grid
+        for rep in range(_GNN_TUNE_REPEATS)
+    ]
+    print(f"    tune {name} {split.mode} [{scope}]: {len(grid)} "
+          f"configurations x {_GNN_TUNE_REPEATS} fits"
+          + (f", {_GNN_TUNE_JOBS} workers" if _GNN_TUNE_JOBS > 1 else ""))
+    results = _run_trials(tasks)
+
+    best, best_score = None, -np.inf
+    for i, params in enumerate(grid):
+        chunk = results[i * _GNN_TUNE_REPEATS : (i + 1) * _GNN_TUNE_REPEATS]
+        scores = [c[0] for c in chunk]
+        epochs = [c[1] for c in chunk]
+        score = float(np.mean(scores))
+        sd = float(np.std(scores, ddof=1)) if len(scores) > 1 else 0.0
+        GNN_TRIALS.append({
+            "model": name, "mode": split.mode, "scope": scope,
+            "trial": i, "params": dict(params),
+            "repeats": len(scores),
+            "epochs_run": int(np.mean(epochs)),
+            "val_avg_precision": score,
+            "val_avg_precision_sd": sd,
+            "val_avg_precision_runs": scores,
+        })
+        print(f"      {i + 1:2}/{len(grid)} {str(params or 'base'):58} "
+              f"val AP {score:.4f} +- {sd:.4f}")
+        if score > best_score:
+            best, best_score = dict(params), score
+
+    if split.mode == _GNN_PRIMARY_MODE:
+        ranked = sorted(
+            (t for t in GNN_TRIALS if t["model"] == name
+             and t["mode"] == split.mode),
+            key=lambda t: -t["val_avg_precision"],
+        )
+        _GNN_SHORTLIST[name] = [
+            dict(t["params"]) for t in ranked[:_GNN_SHORTLIST_N]
+        ]
+
+    _TUNED[key] = best
+    print(f"    tune {name} {split.mode}: chose {best or 'base'} "
+          f"(val AP {best_score:.4f})")
+    return best
 
 
 # --------------------------------------------------------------------------
@@ -595,15 +845,15 @@ def fit_predict(
     elif name == "phys_bde_gbm":
         pred = _fit_gbm("phys_bde_gbm", "phys_bde", instances, split,
                         label_field, seed, tune)
-    elif name == "gnn_bde":
+    elif name in ("gnn", "gnn_huckel", "gnn_bde"):
+        node_kind = {"gnn": "graph", "gnn_huckel": "phys",
+                     "gnn_bde": "graph_bde"}[name]
+        params = (
+            _tune_gnn(name, node_kind, instances, split, label_field)
+            if tune else _TUNED.get((name, split.mode), {})
+        )
         pred = _fit_gnn(instances, split, label_field, seed,
-                        node_kind="graph_bde", name="gnn_bde")
-    elif name == "gnn":
-        pred = _fit_gnn(instances, split, label_field, seed,
-                        node_kind="graph", name="gnn")
-    elif name == "gnn_huckel":
-        pred = _fit_gnn(instances, split, label_field, seed,
-                        node_kind="phys", name="gnn_huckel")
+                        node_kind=node_kind, name=name, **(params or {}))
     else:
         raise ValueError(f"unknown model: {name!r}")
     return calibrate(pred)

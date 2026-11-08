@@ -224,6 +224,34 @@ def main() -> None:
                     "are tested per pair, so a single p just under 0.05 should "
                     "be read with that multiplicity in mind.", ""] + lines
 
+    tun = read("gnn_tuning.csv")
+    if tun:
+        out += ["## The GNN hyperparameter search", "",
+                "Selected on validation average precision. The test set plays "
+                "no part in any row below. Trial 0 is the configuration used "
+                "before tuning, so the search can only improve on it.", ""]
+        for model in [m for m in ORDER if m in {r["model"] for r in tun}]:
+            for mode in ("scaffold", "random"):
+                sub = [r for r in tun
+                       if r["model"] == model and r["mode"] == mode]
+                if not sub:
+                    continue
+                best = max(sub, key=lambda r: float(r["val_avg_precision"]))
+                out += [f"**{MODEL_LABELS.get(model, model)}, {mode} split** "
+                        f"({sub[0]['scope']} search, {len(sub)} "
+                        f"configurations)", "",
+                        "| configuration | epochs | validation AP |",
+                        "|---|---|---|"]
+                for r in sorted(sub,
+                                key=lambda r: -float(r["val_avg_precision"])):
+                    params = json.loads(r["params"])
+                    label = ", ".join(f"{k}={v}" for k, v in params.items()) \
+                        or "base (pre-tuning)"
+                    mark = " **<-**" if r is best else ""
+                    out.append(f"| {label} | {r['epochs_run']} "
+                               f"| {fv(r, 'val_avg_precision', 4)}{mark} |")
+                out.append("")
+
     diag = read("split_diagnostics.csv")
     if diag:
         out += ["## Split diagnostics (seed 0)", "",

@@ -7,6 +7,7 @@ table view, so identity never rests on colour alone.
 
 import argparse
 import csv
+import json
 from collections import defaultdict
 
 import matplotlib.pyplot as plt
@@ -346,6 +347,89 @@ def fig_calibration(rows):
     save(fig, FIGURES / "fig5_calibration.png")
 
 
+def fig_gnn_tuning(rows, mode="scaffold"):
+    """The GNN search: mean validation AP per configuration, with its spread.
+
+    Deliberately two encodings only - position for the score, and a single
+    highlight for the configuration that won - so nothing rests on telling
+    similar hues apart. The horizontal line through each dot is the range over
+    the repeated fits, which is the point of the figure: if those ranges
+    overlap, the ordering of the configurations is not a real ordering.
+    """
+    rows = [r for r in rows if r["mode"] == mode]
+    if not rows:
+        return
+    models = [m for m in ORDER if m in {r["model"] for r in rows}]
+    if not models:
+        return
+
+    fig, axes = plt.subplots(
+        1, len(models), figsize=(4.6 * len(models), 4.6), sharex=True
+    )
+    axes = np.atleast_1d(axes)
+
+    for ax, m in zip(axes, models):
+        sub = [r for r in rows if r["model"] == m]
+        sub.sort(key=lambda r: f(r, "val_avg_precision"))
+        best = max(sub, key=lambda r: f(r, "val_avg_precision"))
+        base = next((r for r in sub if json.loads(r["params"]) == {}), None)
+
+        ys = np.arange(len(sub))
+        means = [f(r, "val_avg_precision") for r in sub]
+
+        if base is not None:
+            ax.axvline(f(base, "val_avg_precision"), color=AXIS,
+                       linewidth=1.1, linestyle=(0, (4, 3)), zorder=1)
+
+        for y, r in zip(ys, sub):
+            runs = json.loads(r["val_avg_precision_runs"] or "[]")
+            if len(runs) > 1:
+                ax.plot([min(runs), max(runs)], [y, y], color=AXIS,
+                        linewidth=1.6, solid_capstyle="round", zorder=2)
+        chosen = [r is best for r in sub]
+        ax.scatter(
+            [v for v, c in zip(means, chosen) if not c],
+            [y for y, c in zip(ys, chosen) if not c],
+            color=SERIES[0], s=52, edgecolor="#fcfcfb", linewidth=1.2,
+            zorder=3,
+        )
+        ax.scatter(
+            [v for v, c in zip(means, chosen) if c],
+            [y for y, c in zip(ys, chosen) if c],
+            color=SERIES[1], s=84, marker="D", edgecolor="#fcfcfb",
+            linewidth=1.2, zorder=4,
+        )
+
+        labels = []
+        for r in sub:
+            params = json.loads(r["params"])
+            labels.append(
+                ", ".join(f"{k}={v}" for k, v in params.items()) or "base"
+            )
+        ax.set_yticks(ys)
+        ax.set_yticklabels(labels, fontsize=7.5)
+        ax.set_ylim(-0.8, len(sub) - 0.2)
+        ax.grid(axis="y", visible=False)
+        strip_frame(ax)
+        ax.set_title(MODEL_LABELS.get(m, m), loc="left", fontsize=9.5)
+        ax.set_xlabel("validation average precision")
+
+    fig.suptitle(
+        f"What the GNN search actually found ({MODE_LABELS.get(mode, mode)})",
+        x=0.01, ha="left", fontsize=11, fontweight="bold",
+    )
+    footnote(
+        fig,
+        f"Dot = mean over {rows[0].get('repeats', '?')} fits of that "
+        "configuration; bar = their full range; dashed line = the pre-tuning "
+        "configuration; diamond = the one chosen. Where the bars overlap, the "
+        "ranking is not a ranking. Selected on validation data only - the test "
+        "set plays no part. Table view: results/gnn_tuning.csv",
+    )
+    fig.tight_layout(rect=(0, 0.05, 1, 0.94))
+    save(fig, FIGURES / "fig6_gnn_tuning.png")
+
+
 def main() -> None:
     argparse.ArgumentParser(description=__doc__).parse_args()
     use_style()
@@ -356,6 +440,7 @@ def main() -> None:
     fig_site_type(read(RESULTS / "per_site_type.csv"))
     fig_novelty(read(RESULTS / "novelty_curve.csv"))
     fig_calibration(read(RESULTS / "calibration.csv"))
+    fig_gnn_tuning(read(RESULTS / "gnn_tuning.csv"))
 
 
 if __name__ == "__main__":
