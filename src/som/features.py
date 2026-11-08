@@ -243,21 +243,56 @@ def fp_block(mol: Chem.Mol, n_bits: int = FP_BITS, radius: int = FP_RADIUS):
 # assembly
 # --------------------------------------------------------------------------
 
-def molecule_features(mol: Chem.Mol, kind: str) -> tuple[np.ndarray, list[str]]:
-    """Feature block for every atom of one molecule, excluding the isoform."""
+#: cached BDE table, loaded on first use by the `*_bde` feature kinds
+_BDE_TABLE: dict | None = None
+
+
+def _bde_table() -> dict:
+    global _BDE_TABLE
+    if _BDE_TABLE is None:
+        from .bde import bde_path, load_bde
+
+        _BDE_TABLE = load_bde()
+        if not _BDE_TABLE:
+            raise FileNotFoundError(
+                f"{bde_path()} not found. Run `make bde` first "
+                "(it needs the separate alfabet-env; see README)."
+            )
+    return _BDE_TABLE
+
+
+def molecule_features(
+    mol: Chem.Mol, kind: str, smiles: str | None = None
+) -> tuple[np.ndarray, list[str]]:
+    """Feature block for every atom of one molecule, excluding the isoform.
+
+    The `*_bde` kinds append the ALFABET bond-dissociation-energy block to the
+    corresponding base kind, so that `phys_bde` is exactly `phys` plus BDE and
+    `graph_bde` is exactly `graph` plus BDE. Keeping the extension strictly
+    additive is what makes the paired ablations interpretable.
+    """
     if kind == "fp":
         return fp_block(mol)
-    if kind == "phys":
-        blocks = [basic_atom_block(mol), charge_block(mol), huckel_block(mol)]
-        X = np.hstack([b[0] for b in blocks])
-        names = [n for b in blocks for n in b[1]]
-        return X, names
-    if kind == "graph":
-        blocks = [basic_atom_block(mol), charge_block(mol)]
-        X = np.hstack([b[0] for b in blocks])
-        names = [n for b in blocks for n in b[1]]
-        return X, names
-    raise ValueError(f"unknown feature kind: {kind!r}")
+
+    base = {
+        "phys": [basic_atom_block, charge_block, huckel_block],
+        "graph": [basic_atom_block, charge_block],
+        "phys_bde": [basic_atom_block, charge_block, huckel_block],
+        "graph_bde": [basic_atom_block, charge_block],
+    }.get(kind)
+    if base is None:
+        raise ValueError(f"unknown feature kind: {kind!r}")
+
+    blocks = [fn(mol) for fn in base]
+    if kind.endswith("_bde"):
+        from .bde import bde_block
+
+        smi = smiles if smiles is not None else Chem.MolToSmiles(mol)
+        blocks.append(bde_block(mol, smi, _bde_table()))
+
+    X = np.hstack([b[0] for b in blocks])
+    names = [n for b in blocks for n in b[1]]
+    return X, names
 
 
 def build_atom_table(
@@ -281,7 +316,7 @@ def build_atom_table(
             mol = Chem.MolFromSmiles(smi)
             if mol is None:
                 raise ValueError(f"curated SMILES failed to parse: {smi}")
-            block, blk_names = molecule_features(mol, kind)
+            block, blk_names = molecule_features(mol, kind, smiles=smi)
             cache[smi] = block
             if names is None:
                 names = list(blk_names)

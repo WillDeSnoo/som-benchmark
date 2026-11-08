@@ -30,7 +30,17 @@ from som.viz import (
     use_style,
 )
 
-ORDER = ["prior", "fp_gbm", "phys_gbm", "gnn", "gnn_huckel"]
+ORDER = [
+    "prior", "smartcyp", "fp_gbm", "phys_gbm", "phys_bde_gbm",
+    "gnn", "gnn_huckel", "gnn_bde",
+]
+
+#: The headline bar chart shows every approach. The breakdown figures show a
+#: four-series subset -- the reference, the published external method, the best
+#: model and the learned representation -- because eight overlapping series on
+#: a dot plot or a reliability curve is not readable, and the ablation variants
+#: are better read from the tables in results/.
+FOCUS = ["prior", "smartcyp", "phys_bde_gbm", "gnn"]
 
 
 def read(path):
@@ -47,9 +57,10 @@ def f(row, key, default=float("nan")):
         return default
 
 
-def models_present(rows):
+def models_present(rows, restrict=None):
     seen = {r["model"] for r in rows}
-    return [m for m in ORDER if m in seen]
+    pool = restrict if restrict is not None else ORDER
+    return [m for m in pool if m in seen]
 
 
 # --------------------------------------------------------------------------
@@ -60,7 +71,7 @@ def fig_main(summary):
     lookup = {(r["model"], r["mode"]): r for r in summary}
     modes = ["random", "scaffold"]
 
-    fig, axes = plt.subplots(1, 2, figsize=(9.6, 3.9))
+    fig, axes = plt.subplots(1, 2, figsize=(13.0, 4.1))
     x = np.arange(len(present))
     width = 0.36
 
@@ -102,7 +113,7 @@ def fig_main(summary):
 
     axes[0].legend(loc="upper left", ncols=2, bbox_to_anchor=(0, 1.0))
     fig.suptitle(
-        "Finding the site of metabolism: five approaches, two splits",
+        "Finding the site of metabolism: eight approaches, two splits",
         x=0.008, ha="left", fontsize=12, fontweight="semibold",
     )
     footnote(
@@ -119,7 +130,7 @@ def fig_per_isoform(rows):
     rows = [r for r in rows if r["mode"] == "scaffold"]
     if not rows:
         return
-    present = models_present(rows)
+    present = models_present(rows, FOCUS)
     isoforms = sorted({r["isoform"] for r in rows})
     by = {(r["model"], r["isoform"]): r for r in rows}
 
@@ -184,7 +195,7 @@ def fig_site_type(rows, min_atoms=30):
     # the frequency reference is included here on purpose: it outperforms the
     # learned models on several site types, which is the single most
     # informative thing in this figure
-    show = models_present(rows)
+    show = models_present(rows, FOCUS)
     by = {(r["model"], r["site_type"]): r for r in rows}
 
     counts = {}
@@ -248,7 +259,7 @@ def fig_novelty(rows):
     rows = pooled or [r for r in rows if r["mode"] == "scaffold"]
     if not rows:
         return
-    present = models_present(rows)
+    present = models_present(rows, FOCUS)
     buckets = []
     for r in rows:
         if r["nn_tanimoto_bucket"] not in buckets:
@@ -299,7 +310,7 @@ def fig_calibration(rows):
     rows = [r for r in rows if r["mode"] == "scaffold"]
     if not rows:
         return
-    present = models_present(rows)
+    present = models_present(rows, FOCUS)
     by = defaultdict(list)
     for r in rows:
         by[r["model"]].append(r)

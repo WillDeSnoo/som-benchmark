@@ -58,7 +58,17 @@ from sklearn.preprocessing import StandardScaler
 from .features import AtomTable, build_atom_table, isoform_onehot
 from .splits import Split, atom_mask
 
-MODELS = ("prior", "fp_gbm", "phys_gbm", "gnn", "gnn_huckel")
+MODELS = (
+    "prior", "smartcyp", "fp_gbm", "phys_gbm", "gnn", "gnn_huckel",
+    "phys_bde_gbm", "gnn_bde",
+)
+
+#: SMARTCyp ships isoform-specific variants for 2D6 and for the 2C subfamily;
+#: everything else uses its general score.
+_SMARTCYP_COLUMN = {
+    "2D6": "score_2d6",
+    "2C8": "score_2c", "2C9": "score_2c", "2C19": "score_2c",
+}
 
 #: cache of featurized tables, keyed by (feature kind, label field)
 _TABLE_CACHE: dict[tuple[str, str], AtomTable] = {}
@@ -161,6 +171,77 @@ def _fit_prior(
 # gradient boosting on tabular features
 # --------------------------------------------------------------------------
 
+def _load_smartcyp() -> dict[tuple[str, int], dict[str, float]]:
+    import csv as _csv
+
+    from .paths import INTERIM
+
+    path = INTERIM / "smartcyp.csv"
+    if not path.exists():
+        raise FileNotFoundError(
+            f"{path} not found. Build the SMARTCyp jar and run "
+            "`scripts/08_smartcyp.py --jar ...` first; see its docstring."
+        )
+    out: dict[tuple[str, int], dict[str, float]] = {}
+    with path.open(newline="") as fh:
+        for r in _csv.DictReader(fh):
+            out[(r["smiles"], int(r["atom_idx"]))] = {
+                "score": float(r["score"]),
+                "score_2d6": float(r["score_2d6"]),
+                "score_2c": float(r["score_2c"]),
+            }
+    return out
+
+
+def _fit_smartcyp(
+    instances: list[dict], table: AtomTable, split: Split, label_field: str
+) -> Prediction:
+    """SMARTCyp as an external baseline.
+
+    Nothing is trained. The only thing fitted is a monotone isotonic map from
+    SMARTCyp's score to a probability, fitted on the *training* atoms purely so
+    that Brier score and ECE are defined. Because the map is monotone and
+    decreasing, it cannot change the ranking, so top-k, ROC-AUC and average
+    precision are exactly SMARTCyp's own out-of-the-box numbers.
+
+    Atoms SMARTCyp does not score (oxygens, halogens) get its own "will not
+    react" sentinel.
+    """
+    from .paths import INTERIM  # noqa: F401  (import error surfaces earlier)
+
+    scores_tab = _load_smartcyp()
+    raw = np.empty(table.X.shape[0], dtype=np.float64)
+    for row, (iid, aidx) in enumerate(zip(table.inst_id, table.atom_idx)):
+        inst = instances[int(iid)]
+        rec = scores_tab.get((inst["smiles"], int(aidx)))
+        if rec is None:
+            raw[row] = 999.0
+            continue
+        col = _SMARTCYP_COLUMN.get(inst["isoform"], "score")
+        raw[row] = rec[col]
+
+    tr = atom_mask(table, split.train_inst)
+    va = atom_mask(table, split.val_inst)
+    te = atom_mask(table, split.test_inst)
+
+    iso = IsotonicRegression(
+        increasing=False, out_of_bounds="clip", y_min=0.0, y_max=1.0
+    )
+    iso.fit(raw[tr], table.y[tr])
+
+    return Prediction(
+        model="smartcyp",
+        y_test=table.y[te], p_test=iso.predict(raw[te]),
+        inst_test=table.inst_id[te], atom_test=table.atom_idx[te],
+        y_val=table.y[va], p_val=iso.predict(raw[va]),
+        inst_val=table.inst_id[va],
+        n_train_atoms=int(tr.sum()),
+        chosen_params={"note": "external method; only the score->probability "
+                               "map is fitted, on train atoms, and it is "
+                               "monotone so rankings are unchanged"},
+    )
+
+
 def _fit_gbm(
     name: str,
     kind: str,
@@ -261,7 +342,7 @@ def _graph_cache(instances: list[dict], kind: str = "graph"):
         if smi in cache:
             continue
         mol = Chem.MolFromSmiles(smi)
-        nf, _ = molecule_features(mol, kind)
+        nf, _ = molecule_features(mol, kind, smiles=smi)
         src, dst, ef = [], [], []
         for b in mol.GetBonds():
             i, j = b.GetBeginAtomIdx(), b.GetEndAtomIdx()
@@ -504,10 +585,19 @@ def fit_predict(
     if name == "prior":
         table = get_table("phys", instances, label_field)
         pred = _fit_prior(instances, table, split, label_field)
+    elif name == "smartcyp":
+        table = get_table("phys", instances, label_field)
+        pred = _fit_smartcyp(instances, table, split, label_field)
     elif name == "fp_gbm":
         pred = _fit_gbm("fp_gbm", "fp", instances, split, label_field, seed, tune)
     elif name == "phys_gbm":
         pred = _fit_gbm("phys_gbm", "phys", instances, split, label_field, seed, tune)
+    elif name == "phys_bde_gbm":
+        pred = _fit_gbm("phys_bde_gbm", "phys_bde", instances, split,
+                        label_field, seed, tune)
+    elif name == "gnn_bde":
+        pred = _fit_gnn(instances, split, label_field, seed,
+                        node_kind="graph_bde", name="gnn_bde")
     elif name == "gnn":
         pred = _fit_gnn(instances, split, label_field, seed,
                         node_kind="graph", name="gnn")

@@ -14,7 +14,10 @@ import matplotlib.pyplot as plt
 #: categorical slots, in fixed order - never cycled, never reordered.
 #: This ordering is validated on the adjacent pairlist (grouped bars, lines),
 #: which is the only arrangement used here.
-SERIES = ["#2a78d6", "#eb6834", "#1baf7a", "#eda100", "#e87ba4"]
+SERIES = [
+    "#2a78d6", "#eb6834", "#1baf7a", "#eda100",
+    "#e87ba4", "#008300", "#6250d6", "#e34948",
+]
 
 #: single hue for sequential/ordinal magnitude
 SEQ = ["#86b6ef", "#5598e7", "#2a78d6", "#1c5cab", "#104281"]
@@ -34,7 +37,10 @@ MODEL_LABELS = {
     "fp_gbm": "fingerprint + GBM",
     "phys_gbm": "Hückel physics + GBM",
     "gnn": "message-passing GNN",
+    "smartcyp": "SMARTCyp (published method)",
     "gnn_huckel": "GNN + Hückel features",
+    "phys_bde_gbm": "Hückel + BDE + GBM",
+    "gnn_bde": "GNN + BDE",
 }
 
 #: shorter forms for crowded category axes
@@ -43,7 +49,10 @@ MODEL_LABELS_SHORT = {
     "fp_gbm": "fingerprint\n+ GBM",
     "phys_gbm": "Hückel\n+ GBM",
     "gnn": "GNN",
+    "smartcyp": "SMARTCyp",
     "gnn_huckel": "GNN\n+ Hückel",
+    "phys_bde_gbm": "Hückel+BDE\n+ GBM",
+    "gnn_bde": "GNN\n+ BDE",
 }
 
 MODE_LABELS = {"random": "random split", "scaffold": "scaffold split"}

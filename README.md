@@ -9,15 +9,22 @@ top. It is the computational question behind "which position do I block to stop
 this compound being cleared", and it is a genuinely atom-level problem: the
 answer is a position, not a molecular property.
 
-Five approaches are compared on the same splits, with the same metrics:
+Eight approaches are compared on the same splits, with the same metrics — two
+reference points and six models:
 
 | | what it uses |
 |---|---|
 | **atom-type frequency** | nothing but the element, H count, aromaticity and ring membership. A reference point, not a model. |
+| **SMARTCyp** | the published external method (Rydberg & Olsen): DFT activation energies looked up by SMARTS atom type, plus a 2D accessibility term. Uses no training data at all. |
 | **fingerprint + GBM** | hashed circular atom environments (Morgan, radii 0–2) with gradient boosting. |
 | **Hückel physics + GBM** | ~60 interpretable descriptors: simple-Hückel frontier densities and Coulson free valence, Gasteiger charges, E-state indices, Crippen contributions, valence/ring context. |
+| **Hückel + BDE + GBM** | the above plus ALFABET-predicted C–H bond dissociation energies — DFT knowledge transferred from ~290k calculations. |
 | **message-passing GNN** | the molecular graph, learning its own representation from basic atom and bond features. |
-| **GNN + Hückel features** | the same network handed the physics descriptors as extra node features. The ablation that separates "what information is available" from "which model class uses it best". |
+| **GNN + Hückel features** | the same network handed the physics descriptors as extra node features. |
+| **GNN + BDE** | the same network handed the bond dissociation energies. |
+
+The last two are ablations: they separate "what information is available" from
+"which model class can use it".
 
 The frequency reference is there on purpose. "Top-1 of 0.65" means very little
 until you know that guessing by atom type alone already gets a good way there,
@@ -38,10 +45,13 @@ The scaffold split is the one to read first.
 | approach | top-1 | top-2 | ROC-AUC | avg precision | ECE |
 |---|---|---|---|---|---|
 | atom-type frequency | 0.425 [0.402, 0.448] | 0.607 [0.583, 0.631] | 0.802 [0.790, 0.814] | 0.274 | 0.025 |
+| SMARTCyp (external, untrained) | 0.635 [0.607, 0.663] | 0.770 [0.744, 0.795] | 0.826 [0.812, 0.840] | 0.338 | 0.023 |
 | fingerprint + GBM | 0.601 [0.568, 0.635] | 0.741 [0.721, 0.760] | 0.871 [0.865, 0.878] | 0.499 | 0.018 |
-| **Hückel physics + GBM** | **0.660 [0.626, 0.695]** | **0.811 [0.787, 0.834]** | **0.887 [0.876, 0.899]** | **0.531** | 0.019 |
+| Hückel physics + GBM | 0.660 [0.626, 0.695] | 0.811 [0.787, 0.834] | 0.887 [0.876, 0.899] | 0.531 | 0.019 |
+| **Hückel + BDE + GBM** | **0.674 [0.650, 0.698]** | **0.812 [0.789, 0.834]** | **0.907 [0.899, 0.915]** | **0.580** | 0.018 |
 | message-passing GNN | 0.642 [0.611, 0.673] | 0.785 [0.762, 0.808] | 0.873 [0.862, 0.884] | 0.501 | 0.032 |
 | GNN + Hückel features | 0.644 [0.618, 0.671] | 0.768 [0.747, 0.789] | 0.872 [0.863, 0.880] | 0.501 | 0.028 |
+| GNN + BDE | 0.623 [0.583, 0.663] | 0.770 [0.747, 0.794] | 0.877 [0.867, 0.886] | 0.511 | 0.033 |
 
 ![Model comparison](figures/fig1_model_comparison.png)
 
@@ -49,14 +59,42 @@ Because every model sees the same splits, differences can be **paired**, which
 is much more sensitive than eyeballing overlapping intervals. Full tables in
 [results/summary.md](results/summary.md); the ones that matter are below.
 
+**SMARTCyp, which does no learning at all, beats two of the six models.** At
+0.635 top-1 it is ahead of the fingerprint GBM (0.601) and level with the GNN
+(0.642), using nothing but tabulated DFT activation energies and a SMARTS match
+— no training data touched. The best model here beats it by +0.058 top-1
+[+0.036, +0.080], which is real but not large. Anyone presenting a trained SOM
+model without this comparison is omitting the number that matters most.
+
+Its ROC-AUC tells a different story though: 0.826 against 0.907. SMARTCyp
+assigns many atoms the same "will not react" sentinel, so it ranks well *within*
+a molecule — which is what top-k measures and what a chemist wants — but ranks
+poorly across the whole atom pool. A good illustration of why this project
+reports both.
+
 **The physics descriptors beat the hashed fingerprint, clearly.** Paired over 20
 splits, Hückel + GBM gains +0.061 top-1 [+0.045, +0.076] and +0.073 top-2 over
 fingerprint + GBM, both p < 0.0001. About 60 interpretable descriptors beat 1024
 hashed bits.
 
-**But the GNN did not need the physics — and that is the most informative result
-here.** Giving the GNN the identical feature set `phys_gbm` uses changes
-essentially nothing:
+**Transferred DFT bond dissociation energies help the GBM.** ALFABET predicts
+C–H BDEs at ~0.6 kcal/mol against DFT in milliseconds, having been trained on
+~290k dissociations. Adding them:
+
+| phys_bde_gbm − phys_gbm | difference [95% CI] | p |
+|---|---|---|
+| top-1 | +0.018 [+0.006, +0.030] | 0.005 |
+| top-2 | +0.004 [−0.005, +0.012] | 0.40 |
+| ROC-AUC | +0.017 [+0.013, +0.022] | <0.0001 |
+| avg precision | +0.048 [+0.038, +0.058] | <0.0001 |
+
+A modest top-1 gain and a solid one in atom-level ranking. This is the one
+addition that brought in information from outside the dataset, and it is the
+only feature set that improved on the Hückel descriptors.
+
+**But the GNN cannot use either descriptor set — and that is the most
+informative result here.** Giving the GNN the identical feature set `phys_gbm`
+uses changes essentially nothing:
 
 | gnn_huckel − gnn | difference [95% CI] | p |
 |---|---|---|
@@ -73,6 +111,14 @@ valence are functions of the molecular graph, and message passing over that
 graph is exactly the operation that can approximate them. The physics and the
 learned representation carry the **same information**, not complementary
 information.
+
+The BDE features behave the same way in the GNN — `gnn_bde − gnn` is null on
+all four metrics (top-1 −0.014, p = 0.13; ROC-AUC +0.002, p = 0.54) — even
+though those same features clearly helped the GBM. So this is not simply "the
+descriptors were redundant": the identical features add signal to one model
+class and nothing to the other. The GNN appears unable to exploit extra node
+features at this data size, which is a statement about having 679 molecules,
+not about the features.
 
 **Which means the Hückel model's advantage is not about chemistry at all — it is
 about model class.** On *identical* features, gradient boosting beats the GNN:
@@ -112,9 +158,9 @@ directionally and not as effect sizes.
 **A quarter of the top-1 performance is available from atom type alone.** The
 frequency reference reaches 0.425 top-1 and 0.607 top-2 knowing nothing but
 element, hydrogen count, aromaticity and ring membership. Paired, the best model
-adds +0.250 top-1 [+0.226, +0.274] over it. That is a large, unambiguous gain —
-and it is also the correct denominator: a paper reporting 0.66 without this row
-is reporting something much less impressive than it sounds.
+adds +0.250 top-1 over it, and even SMARTCyp adds +0.210 [+0.185, +0.235]. Large,
+unambiguous gains — and the correct denominator: a paper reporting 0.67 without
+this row is reporting something much less impressive than it sounds.
 
 **The scaffold split barely costs anything — which was not what I expected.**
 
@@ -159,9 +205,19 @@ carbon above the sulfur, and pay for it. A blunt element prior beats contextual
 reasoning on the cases where context is not needed — a good argument for an
 ensemble, and a reminder that aggregate metrics hide this entirely.
 
+**SMARTCyp's failures are different failures, which is what makes it useful
+here.** It only scores carbon, nitrogen and sulfur, so oxidative dehalogenation
+(0.29 against 0.90 for everything else) and direct oxygen sites (0.00) are
+structurally out of reach for it, and methyl hydroxylation collapses to 0.08
+against the frequency reference's 0.67. But it is the best of all four on
+benzylic/allylic hydroxylation and competitive on N-dealkylation. The errors are
+not nested, which is the standard precondition for an ensemble being worth
+more than its parts.
+
 **Aromatic C–H hydroxylation is the dominant failure by volume.** It is the
-largest site class (2412 labelled atoms) and the best model finds only 0.36 of
-them in the top 2. A benzene ring offers several near-equivalent positions, the
+largest site class (2412 labelled atoms) and no model exceeds 0.36 — the best
+is Hückel + GBM at 0.358, and the BDE features do not help here (0.329).
+A benzene ring offers several near-equivalent positions, the
 true one is often decided by sterics or by how the substrate sits in the active
 site, and nothing in a 2D model can see that. Aromatic carbons bearing a
 substituent (n=22) are never found by anything.
@@ -170,22 +226,24 @@ substituent (n=22) are never found by anything.
 
 ![Per isoform](figures/fig2_per_isoform.png)
 
-Hückel + GBM runs from 0.78 (CYP3A4) to 0.85 (CYP2D6) top-2. CYP3A4 is the
-*worst* despite having by far the most training data (475 instances). Its
-substrates are simply bigger — 25 heavy atoms on average against 19.7 for
-CYP1A2 — so there are more candidate atoms to rank, and 3A4's promiscuity means
-the chemistry is less sharply determined. More data does not help when the task
-itself is harder.
+The best model runs from 0.77 (CYP2B6) to 0.85 (CYP2C9) top-2, and CYP3A4 sits
+near the bottom at 0.79 despite having by far the most training data (475
+instances, against 151 for 2B6). Its substrates are simply bigger — 25 heavy
+atoms on average against 19.7 for CYP1A2 — so there are more candidate atoms to
+rank, and 3A4's promiscuity means the chemistry is less sharply determined.
+More data does not help when the task itself is harder. The isoform ordering
+is not stable across models, though, so read this as "the spread is modest and
+3A4 is not the easy case its sample size suggests" rather than as a ranking.
 
 **Performance does decay with novelty, but only at the far end.**
 
 ![Novelty](figures/fig4_novelty.png)
 
 Pooling both split types and bucketing test molecules by similarity to their
-nearest training neighbour, top-1 for the best model is 0.61 for molecules below
-Tanimoto 0.30 and around 0.67–0.76 everywhere above it. So the penalty is real
-but confined to genuinely dissimilar chemistry, and it is about 0.08–0.10 rather
-than a collapse. This is also the more useful form of the random-versus-scaffold
+nearest training neighbour, top-1 for the best model is 0.63 for molecules below
+Tanimoto 0.30 and 0.68–0.73 everywhere above it. So the penalty is real but
+confined to genuinely dissimilar chemistry, and it is under 0.10 rather than a
+collapse. This is also the more useful form of the random-versus-scaffold
 question: the gap between the two split policies is small because both produce
 test sets that are mostly *not* in the hard bucket.
 
@@ -328,6 +386,30 @@ make data        # download the raw SDFs from the pinned upstream commit
 make curate      # standardize, relabel, deduplicate; print the curation report
 ```
 
+Two stages need extra setup and are optional — skip them and the corresponding
+models simply aren't run. ALFABET needs its own environment (it pins
+`scikit-learn==0.24.2` and needs TensorFlow; see `environment-alfabet.yml` for
+why `--no-deps` is correct):
+
+```bash
+mamba env create -f environment-alfabet.yml && conda run -n alfabet-env pip install --no-deps alfabet==0.4.1
+```
+
+```bash
+make bde         # ALFABET C-H bond dissociation energies (~5 s for all 679)
+```
+
+SMARTCyp is a Java program under LGPL-3.0 and is not redistributed here. Build
+it from the CDK port, then point the stage at the jar:
+
+```bash
+git clone https://github.com/cdk/smartcyp && (cd smartcyp && mvn -B -DskipTests package)
+```
+
+```bash
+make smartcyp SMARTCYP_JAR=smartcyp/target/smartcyp.jar
+```
+
 ```bash
 make evaluate    # all models x both splits x 10 seeds
 ```
@@ -428,9 +510,21 @@ Stated plainly, because they bound what these numbers support:
   Regioselectivity that is determined by how a substrate sits in the active site
   is out of reach by construction.
 - **No external test set.** Every number is an internal held-out estimate under
-  a particular split policy. A prospective comparison against SMARTCyp,
-  FAME3 or XenoSite on a common external set would be the honest next step, and
-  is not done here.
+  a particular split policy. SMARTCyp gives an external *method* to measure
+  against, which is a real improvement, but a prospective comparison on an
+  external *dataset* — against FAME3 or XenoSite too — is still the honest next
+  step and is not done here.
+- **The SMARTCyp build is the CDK 2.0 port**, whose authors state it "has not
+  been tested yet" against the original. It also needs `-Xss512m` to avoid a
+  stack overflow in CDK's aromatic bond-order perception, and one fused
+  polycyclic molecule fails even then (logged in
+  `data/interim/smartcyp_failed.txt`; its atoms score as unreactive, costing
+  SMARTCyp at most 1/679 of its top-k). So treat its numbers as a close
+  approximation to published SMARTCyp, not as a verified reproduction.
+- **The BDE features are predictions, not calculations.** ALFABET is accurate
+  to ~0.6 kcal/mol against its own DFT level, and 18 of 679 molecules fall
+  outside its stated applicability domain (flagged as a feature column). A real
+  DFT or UMA calculation on these molecules would be the stronger version.
 - **Modest scale.** 679 molecules is small. The GNN in particular is almost
   certainly data-limited rather than architecture-limited, and the fact that it
   does not beat ~60 hand-built descriptors should be read that way rather than
@@ -444,19 +538,29 @@ Stated plainly, because they bound what these numbers support:
 
 ## What I would do next
 
-In rough order of what would most change the conclusions: an external
-prospective test set and a comparison against SMARTCyp and FAME3; treating the
-unlabelled atoms properly as positive-unlabelled rather than as negatives;
-pooling in a second annotation source to test transfer; a proper
-hyperparameter search for the GNN, since the "same features, different model
-class" result above would be much stronger if the GNN had been tuned as hard as
-the GBMs; and an explicit ensemble of the frequency reference with a learned
-model, given how badly the learned models lose on sulfur and methyl sites.
+In rough order of what would most change the conclusions:
 
-The GNN-with-Hückel-features ablation, which used to be on this list, is now
-run — see the results above. It is the clearest single finding in the project:
-the physics descriptors are not adding information the graph network lacked,
-so the remaining gap is about model class and data scale.
+1. **A proper hyperparameter search for the GNN.** Two results now hinge on the
+   GNN failing to use features the GBM used well, and it is the only model that
+   got a single fixed configuration. That asymmetry has to be closed before the
+   "different model class" reading is safe.
+2. **An external test set**, and comparisons against FAME3 and XenoSite
+   alongside SMARTCyp.
+3. **3D steric accessibility from UMA-optimised geometries.** The single
+   largest failure class, aromatic C–H hydroxylation at 0.36, is one where the
+   candidate positions are near-electronically-equivalent and sterics decide.
+   No electronic descriptor, Hückel or DFT, can separate them; this is the one
+   remaining idea that attacks that failure directly.
+4. **Treating unlabelled atoms as positive-unlabelled** rather than as
+   negatives.
+5. **An ensemble of the frequency reference with a learned model**, given how
+   badly the learned models lose on sulfur and methyl sites.
+
+Two items that used to be on this list — the GNN-with-Hückel ablation and the
+SMARTCyp baseline — are now done, and both changed the conclusions. Real DFT
+single points for ALIE and condensed Fukui functions remain untried; given that
+transferred BDEs helped the GBM but nothing helped the GNN, the expected value
+is moderate and the cost is a cluster run.
 
 ---
 

@@ -1,0 +1,36 @@
+# Second, isolated environment, used by ONE stage: `make bde`.
+#
+#   mamba env create -f environment-alfabet.yml
+#   conda activate alfabet-env
+#   pip install --no-deps alfabet==0.4.1
+#
+# Why a separate environment, and why --no-deps:
+#
+# ALFABET 0.4.1 hard-pins `scikit-learn==0.24.2` (2021), which does not build
+# against modern Python or NumPy. That pin exists only for `alfabet.neighbors`,
+# the applicability-domain check, which the prediction path never imports -- so
+# installing without dependencies and supplying current ones works, and keeps
+# TensorFlow and an ancient sklearn out of the main `som-bench` environment.
+#
+# `tf-keras` plus TF_USE_LEGACY_KERAS=1 is required because the published
+# ALFABET weights are a legacy TensorFlow SavedModel, which Keras 3 refuses to
+# load. The Makefile sets that variable for you.
+#
+# ALFABET is MIT-licensed (NREL). It downloads its model weights from the
+# alfabet-models GitHub release on first use, verified against known SHA-256
+# hashes. Cite: St. John et al., Nat. Commun. 2020, 11, 2328.
+name: alfabet-env
+channels:
+  - conda-forge
+dependencies:
+  - python=3.11.18
+  - rdkit=2025.03.3
+  - pandas=3.1.1
+  - numpy=2.4.6
+  - pip
+  - pip:
+      - tensorflow==2.21.0
+      - tf-keras==2.21.0
+      - nfp==0.3.12
+      - pooch==1.9.0
+      - tqdm==4.70.1

@@ -12,7 +12,7 @@ import json
 from som.paths import RESULTS
 from som.viz import MODEL_LABELS
 
-ORDER = ["prior", "fp_gbm", "phys_gbm", "gnn", "gnn_huckel"]
+ORDER = ["prior", "smartcyp", "fp_gbm", "phys_gbm", "phys_bde_gbm", "gnn", "gnn_huckel", "gnn_bde"]
 
 
 def read(name):
@@ -179,6 +179,14 @@ def main() -> None:
             by_split.setdefault((r["mode"], r["seed"]), {})[r["model"]] = r
 
         pairs = [
+            ("phys_bde_gbm", "smartcyp",
+             "best model vs the published external method"),
+            ("smartcyp", "prior",
+             "does the published method beat the trivial reference?"),
+            ("phys_bde_gbm", "phys_gbm",
+             "does adding transferred DFT bond dissociation energies help?"),
+            ("gnn_bde", "gnn",
+             "same question, for the GNN"),
             ("gnn_huckel", "gnn",
              "does giving the GNN the Hückel descriptors help?"),
             ("phys_gbm", "gnn_huckel",
