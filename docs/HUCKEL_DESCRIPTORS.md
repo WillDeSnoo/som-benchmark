@@ -11,6 +11,16 @@ so `phys` = `graph` + this file, strictly additively. That is asserted in
 `tests/test_features.py`, because the `gnn` against `gnn_huckel` ablation is
 only meaningful if it holds.
 
+> **Do these features earn their place? Measured: no.** Dropping all 21 of them
+> and refitting the same GBM on the remaining 34 costs +0.001 top-1 (p = 0.96)
+> on the scaffold splits, and the only nominally significant metric is a
+> *negative* one. They carry genuine association with the label —
+> `huckel_free_valence` has the largest non-trivial coefficient in the linear
+> proxy fit, with the correct sign — but nothing the basic atom and bond
+> features do not already supply. The `phys_gbm − basic_gbm` block in
+> [`results/summary.md`](../results/summary.md) is the measurement. This file
+> documents what the descriptors are, not a claim that they help.
+
 `tests/test_huckel_docs.py` asserts that the tables below list exactly the
 Hückel feature columns the code emits, so this document cannot drift from the
 implementation.

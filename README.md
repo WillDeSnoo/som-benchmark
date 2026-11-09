@@ -19,8 +19,11 @@ Three results worth more than that number:
 
 - **A 2010 SMARTS lookup table beats two of the six trained models.** SMARTCyp
   touches no training data and lands within 0.058 top-1 of the best model here.
-- **A 55-feature physics set, 21 of them Hückel-derived, beats 1024 hashed fingerprint bits**
-  (+0.061 top-1, p < 0.0001) and beat a GNN given identical inputs.
+- **A 55-feature physics set beats 1024 hashed fingerprint bits** (+0.061
+  top-1, p < 0.0001) — but an ablation shows the 21 Hückel-derived columns
+  contribute **nothing** to that (+0.001 top-1, p = 0.96, scaffold splits).
+  The cheap atom and bond context does the work; the π-system theory is
+  decorative, despite having the largest non-trivial coefficient.
 - **A twelve-point hyperparameter search for the GNN found nothing** — and the
   measurement had to be fixed first, because nondeterministic thread scheduling
   was producing run-to-run noise larger than the differences being searched
@@ -85,6 +88,7 @@ The scaffold split is the one to read first.
 | atom-type frequency | 0.425 [0.402, 0.448] | 0.607 [0.583, 0.631] | 0.802 [0.790, 0.814] | 0.274 | 0.025 |
 | SMARTCyp (external, untrained) | 0.635 [0.607, 0.663] | 0.770 [0.744, 0.795] | 0.826 [0.812, 0.840] | 0.341 | 0.018 |
 | fingerprint + GBM | 0.601 [0.568, 0.635] | 0.741 [0.721, 0.760] | 0.871 [0.865, 0.878] | 0.499 | 0.018 |
+| atom/bond features + GBM (no Hückel) | 0.660 [0.639, 0.680] | 0.795 [0.780, 0.811] | 0.884 [0.873, 0.895] | 0.547 | 0.020 |
 | Hückel physics + GBM | 0.660 [0.626, 0.695] | 0.811 [0.787, 0.834] | 0.887 [0.876, 0.899] | 0.531 | 0.019 |
 | **Hückel + BDE + GBM** | **0.674 [0.650, 0.698]** | **0.812 [0.789, 0.834]** | **0.907 [0.899, 0.915]** | **0.584** | 0.019 |
 | message-passing GNN (tuned) | 0.643 [0.615, 0.670] | 0.788 [0.771, 0.804] | 0.880 [0.869, 0.891] | 0.504 | 0.026 |
@@ -110,10 +114,38 @@ a molecule — which is what top-k measures and what a chemist wants — but ran
 poorly across the whole atom pool. A good illustration of why this project
 reports both.
 
-**The physics descriptors beat the hashed fingerprint, clearly.** Paired over 20
-splits, Hückel + GBM gains +0.061 top-1 [+0.045, +0.076] and +0.073 top-2 over
-fingerprint + GBM, both p < 0.0001. Fifty-five interpretable descriptors, 21 of
-them Hückel-derived, beat 1024 hashed bits.
+**Hand-built descriptors beat the hashed fingerprint, clearly — but the Hückel
+theory is not what does it.** Paired over 20 splits, the physics set gains
++0.061 top-1 [+0.045, +0.076] and +0.073 top-2 over fingerprint + GBM, both
+p < 0.0001. Fifty-five interpretable descriptors beat 1024 hashed bits.
+
+Dropping the 21 Hückel columns and refitting the same estimator on the
+remaining 34 basic atom and bond features costs **nothing**:
+
+| phys_gbm − basic_gbm | pooled [95% CI] | p | scaffold only [95% CI] | p |
+|---|---|---|---|---|
+| top-1 | −0.009 [−0.025, +0.007] | 0.25 | +0.001 [−0.026, +0.027] | 0.96 |
+| top-2 | +0.011 [−0.003, +0.024] | 0.12 | +0.015 [−0.008, +0.039] | 0.18 |
+| ROC-AUC | +0.002 [−0.001, +0.006] | 0.23 | +0.004 [−0.003, +0.011] | 0.25 |
+| avg precision | −0.013 [−0.024, −0.001] | 0.033 | −0.016 [−0.037, +0.005] | 0.11 |
+
+Twenty-one Hückel columns, and the only nominally significant entry is
+*negative*. The feature-set advantage over the fingerprint survives intact
+without them (+0.059 top-1 scaffold-only, p = 0.0026), so what beats the
+hashed bits is the cheap atom and bond context — element, hybridization,
+degree, hydrogen count, ring membership, Gasteiger charge — not the π-system
+theory.
+
+This is worth stating plainly because the signed coefficients invite the
+opposite reading. `huckel_free_valence` is the largest non-trivial coefficient
+in the linear proxy fit, with the chemically correct sign, and
+`huckel_frag_x_homo` correctly says a higher-lying HOMO is more vulnerable.
+Both are real *associations*. Neither is *information the model needed*: the
+Hückel quantities are largely recoverable from the atom and bond features that
+remain, and `huckel_free_valence` correlates at r = +0.89 with `huckel_q_pi`
+inside the block. A coefficient table shows what correlates with the label; only
+an ablation shows what the model would miss. They disagree here, and the
+ablation is the one that answers the question.
 
 **Transferred DFT bond dissociation energies help the GBM.** ALFABET predicts
 C–H BDEs at ~0.6 kcal/mol against DFT in milliseconds, having been trained on
@@ -127,8 +159,12 @@ C–H BDEs at ~0.6 kcal/mol against DFT in milliseconds, having been trained on
 | avg precision | +0.048 [+0.038, +0.058] | <0.0001 |
 
 A modest top-1 gain and a solid one in atom-level ranking. This is the one
-addition that brought in information from outside the dataset, and it is the
-only feature set that improved on the Hückel descriptors.
+addition that brought in information from outside the dataset, and — now that
+the Hückel block is measured to add nothing — the only feature block in the
+project that demonstrably improves on the basic atom and bond features.
+Note that its top-1 gain is pooled across both split modes; on the scaffold
+splits alone it is +0.014 [−0.007, +0.034], p = 0.16, so the durable BDE
+result is the ranking improvement, not the top-1 one.
 
 **But extra node features make the GNN *worse*, not better — and that is the
 most informative result here.** Giving the GNN the identical feature set
@@ -188,8 +224,25 @@ This now rests on a tuned comparison rather than a default one — each variant
 got its own search, described [below](#the-gnn-hyperparameter-search), so it is
 not an artifact of the plain GNN having been luckier with its hyperparameters.
 
-**Which means the Hückel model's advantage is not about chemistry at all — it is
-about model class.** On *identical* features, gradient boosting beats the GNN:
+**Which means the physics model's advantage is not about chemistry at all — it
+is about model class.** The Hückel ablation above says the same thing from the
+other direction. The cleanest demonstration is `basic_gbm` against the plain
+GNN, because those two are handed *byte-identical* feature matrices — the
+`graph` kind is exactly what both receive:
+
+| basic_gbm − gnn | pooled [95% CI] | p | scaffold only [95% CI] | p |
+|---|---|---|---|---|
+| top-1 | +0.019 [+0.004, +0.034] | 0.018 | +0.017 [−0.011, +0.045] | 0.20 |
+| top-2 | +0.013 [−0.001, +0.028] | 0.074 | +0.007 [−0.013, +0.027] | 0.43 |
+| ROC-AUC | +0.006 [−0.002, +0.014] | 0.14 | +0.003 [−0.013, +0.019] | 0.65 |
+| avg precision | +0.040 [+0.017, +0.062] | 0.0016 | +0.043 [−0.003, +0.089] | 0.063 |
+
+Boosted trees are ahead pooled on top-1 and average precision, and no metric
+reaches significance on the 10 scaffold splits alone. So at n = 10 scaffold
+splits this project **cannot** separate the two estimators on identical
+features; the model-class claim is supported pooled and is underpowered on the
+harder split. The older comparison below adds the Hückel columns to the GBM
+side, which no longer isolates anything now that they are measured to be inert:
 
 | phys_gbm − gnn_huckel | pooled [95% CI] | p | scaffold only [95% CI] | p |
 |---|---|---|---|---|
@@ -762,13 +815,22 @@ In rough order of what would most change the conclusions:
    here, which tests the data-limited explanation directly instead of assuming
    it.
 
-Three items that used to be on this list — the GNN-with-Hückel ablation, the
-SMARTCyp baseline, and a proper GNN hyperparameter search — are now done. The
-first two changed the conclusions; the third confirmed one, which is the less
-exciting outcome and the more useful one. Real DFT single points for ALIE and
-condensed Fukui functions remain untried; given that transferred BDEs helped the
-GBM and actively hurt the GNN, the expected value is moderate and the cost is a
-cluster run.
+Four items that used to be on this list — the GNN-with-Hückel ablation, the
+SMARTCyp baseline, a proper GNN hyperparameter search, and the Hückel-block
+ablation — are now done. Three changed the conclusions; the hyperparameter
+search confirmed one, which is the less exciting outcome and the more useful
+one. The Hückel ablation was the most costly: it removed the project's
+nominal headline, since the descriptor set that names the repository turns out
+to contribute nothing the basic atom and bond features do not already carry.
+
+Real DFT single points for ALIE and condensed Fukui functions remain untried.
+The case for them is now *weaker*, not stronger: if 21 Hückel columns are
+redundant with cheap atom context, better π-electronic descriptors may be too,
+and the honest prior is that the ceiling here is set by 3D accessibility and
+by the positive-unlabelled nature of the labels rather than by electronic
+structure. The cheap version of that test — permutation importance on the GBM
+to see whether *any* electronic feature survives conditioning — costs minutes
+and should come before a cluster run.
 
 ---
 

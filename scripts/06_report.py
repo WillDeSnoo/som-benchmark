@@ -12,7 +12,8 @@ import json
 from som.paths import RESULTS
 from som.viz import MODEL_LABELS
 
-ORDER = ["prior", "smartcyp", "fp_gbm", "phys_gbm", "phys_bde_gbm", "gnn", "gnn_huckel", "gnn_bde"]
+ORDER = ["prior", "smartcyp", "fp_gbm", "basic_gbm", "phys_gbm",
+         "phys_bde_gbm", "gnn", "gnn_huckel", "gnn_bde"]
 
 
 def read(name):
@@ -197,6 +198,14 @@ def main() -> None:
              "does giving the GNN the Hückel descriptors help?"),
             ("phys_gbm", "gnn_huckel",
              "same features, different model class"),
+            ("phys_gbm", "basic_gbm",
+             "what the 21 Hückel columns contribute, estimator held fixed"),
+            ("basic_gbm", "gnn",
+             "identical features, different estimator: the cleanest "
+             "model-class comparison here"),
+            ("basic_gbm", "fp_gbm",
+             "hand-built atom/bond features vs hashed environments, "
+             "no Hückel theory involved"),
             ("phys_gbm", "fp_gbm",
              "physics descriptors vs hashed environments"),
             ("phys_gbm", "prior",

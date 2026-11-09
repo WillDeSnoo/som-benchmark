@@ -143,8 +143,10 @@ def main() -> None:
                       f"auc {raw['roc_auc']:.3f}  ap {raw['avg_precision']:.3f}  "
                       f"ece {raw['ece']:.3f}  ({dt:.0f}s)")
 
-                if name == "phys_gbm" and pred.feature_importance and seed == 0:
-                    out = RESULTS / f"phys_linear_coefficients_{mode}.csv"
+                if (name in ("phys_gbm", "basic_gbm")
+                        and pred.feature_importance and seed == 0):
+                    stem = ("phys" if name == "phys_gbm" else "basic")
+                    out = RESULTS / f"{stem}_linear_coefficients_{mode}.csv"
                     with out.open("w", newline="") as fh:
                         w = csv.writer(fh)
                         w.writerow(["feature", "coefficient"])

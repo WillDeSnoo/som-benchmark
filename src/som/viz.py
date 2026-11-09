@@ -17,6 +17,7 @@ import matplotlib.pyplot as plt
 SERIES = [
     "#2a78d6", "#eb6834", "#1baf7a", "#eda100",
     "#e87ba4", "#008300", "#6250d6", "#e34948",
+    "#00868b",
 ]
 
 #: single hue for sequential/ordinal magnitude
@@ -35,6 +36,7 @@ ON_FILL = {"#eda100": "#0b0b0b"}
 MODEL_LABELS = {
     "prior": "atom-type frequency",
     "fp_gbm": "fingerprint + GBM",
+    "basic_gbm": "atom/bond features + GBM (no Hückel)",
     "phys_gbm": "Hückel physics + GBM",
     "gnn": "message-passing GNN",
     "smartcyp": "SMARTCyp (published method)",
@@ -47,6 +49,7 @@ MODEL_LABELS = {
 MODEL_LABELS_SHORT = {
     "prior": "atom-type\nfrequency",
     "fp_gbm": "fingerprint\n+ GBM",
+    "basic_gbm": "no Hückel\n+ GBM",
     "phys_gbm": "Hückel\n+ GBM",
     "gnn": "GNN",
     "smartcyp": "SMARTCyp",

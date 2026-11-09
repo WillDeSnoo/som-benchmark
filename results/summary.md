@@ -21,6 +21,7 @@ Mean over repeated splits, with the 95% CI of the mean.
 | atom-type frequency | 0.419 [0.392, 0.446] | 0.597 [0.582, 0.612] | 0.799 [0.786, 0.812] | 0.278 [0.263, 0.292] | 0.023 |
 | SMARTCyp (published method) | 0.629 [0.598, 0.660] | 0.760 [0.729, 0.792] | 0.822 [0.811, 0.833] | 0.340 [0.321, 0.359] | 0.016 |
 | fingerprint + GBM | 0.622 [0.586, 0.657] | 0.745 [0.716, 0.775] | 0.879 [0.868, 0.889] | 0.523 [0.495, 0.550] | 0.023 |
+| atom/bond features + GBM (no Hückel) | 0.703 [0.672, 0.733] | 0.816 [0.779, 0.852] | 0.901 [0.891, 0.910] | 0.599 [0.565, 0.632] | 0.012 |
 | Hückel physics + GBM | 0.684 [0.664, 0.703] | 0.822 [0.794, 0.849] | 0.901 [0.891, 0.911] | 0.589 [0.558, 0.620] | 0.035 |
 | Hückel + BDE + GBM | 0.706 [0.680, 0.732] | 0.828 [0.806, 0.849] | 0.916 [0.907, 0.925] | 0.631 [0.602, 0.661] | 0.024 |
 | message-passing GNN | 0.682 [0.661, 0.704] | 0.797 [0.774, 0.820] | 0.892 [0.880, 0.904] | 0.562 [0.535, 0.589] | 0.021 |
@@ -34,6 +35,7 @@ Mean over repeated splits, with the 95% CI of the mean.
 | atom-type frequency | 0.425 [0.402, 0.448] | 0.607 [0.583, 0.631] | 0.802 [0.790, 0.814] | 0.274 [0.261, 0.287] | 0.025 |
 | SMARTCyp (published method) | 0.635 [0.607, 0.663] | 0.770 [0.744, 0.795] | 0.826 [0.812, 0.840] | 0.341 [0.311, 0.370] | 0.018 |
 | fingerprint + GBM | 0.601 [0.568, 0.635] | 0.741 [0.721, 0.760] | 0.871 [0.865, 0.878] | 0.499 [0.477, 0.522] | 0.018 |
+| atom/bond features + GBM (no Hückel) | 0.660 [0.639, 0.680] | 0.795 [0.780, 0.811] | 0.884 [0.873, 0.895] | 0.547 [0.525, 0.568] | 0.022 |
 | Hückel physics + GBM | 0.660 [0.626, 0.695] | 0.811 [0.787, 0.834] | 0.887 [0.876, 0.899] | 0.531 [0.499, 0.562] | 0.019 |
 | Hückel + BDE + GBM | 0.674 [0.650, 0.698] | 0.812 [0.789, 0.834] | 0.907 [0.899, 0.915] | 0.584 [0.552, 0.616] | 0.019 |
 | message-passing GNN | 0.643 [0.615, 0.670] | 0.788 [0.771, 0.804] | 0.880 [0.869, 0.891] | 0.504 [0.459, 0.549] | 0.026 |
@@ -186,6 +188,33 @@ Paired t-tests on the per-split differences. The pooled column averages the rand
 | top2 | +0.0379 [+0.0247, +0.0510] | 0.0000 | +0.0405 [+0.0191, +0.0619] | 0.0021 |
 | roc_auc | +0.0185 [+0.0138, +0.0231] | 0.0000 | +0.0189 [+0.0126, +0.0253] | 0.0001 |
 | avg_precision | +0.0427 [+0.0317, +0.0536] | 0.0000 | +0.0440 [+0.0226, +0.0655] | 0.0012 |
+
+**phys_gbm − basic_gbm** — what the 21 Hückel columns contribute, estimator held fixed (pooled over 20 splits; scaffold column is the 10 scaffold splits alone)
+
+| metric | pooled difference [95% CI] | p | scaffold only [95% CI] | p |
+|---|---|---|---|---|
+| top1 | -0.0090 [-0.0248, +0.0067] | 0.2457 | +0.0007 [-0.0257, +0.0270] | 0.9552 |
+| top2 | +0.0107 [-0.0031, +0.0244] | 0.1202 | +0.0152 [-0.0084, +0.0388] | 0.1788 |
+| roc_auc | +0.0021 [-0.0014, +0.0056] | 0.2316 | +0.0037 [-0.0031, +0.0105] | 0.2522 |
+| avg_precision | -0.0127 [-0.0243, -0.0011] | 0.0334 | -0.0160 [-0.0365, +0.0045] | 0.1109 |
+
+**basic_gbm − gnn** — identical features, different estimator: the cleanest model-class comparison here (pooled over 20 splits; scaffold column is the 10 scaffold splits alone)
+
+| metric | pooled difference [95% CI] | p | scaffold only [95% CI] | p |
+|---|---|---|---|---|
+| top1 | +0.0185 [+0.0035, +0.0335] | 0.0180 | +0.0169 [-0.0107, +0.0445] | 0.2001 |
+| top2 | +0.0131 [-0.0014, +0.0275] | 0.0738 | +0.0074 [-0.0126, +0.0274] | 0.4260 |
+| roc_auc | +0.0061 [-0.0022, +0.0143] | 0.1399 | +0.0033 [-0.0128, +0.0194] | 0.6547 |
+| avg_precision | +0.0396 [+0.0171, +0.0621] | 0.0016 | +0.0431 [-0.0028, +0.0890] | 0.0627 |
+
+**basic_gbm − fp_gbm** — hand-built atom/bond features vs hashed environments, no Hückel theory involved (pooled over 20 splits; scaffold column is the 10 scaffold splits alone)
+
+| metric | pooled difference [95% CI] | p | scaffold only [95% CI] | p |
+|---|---|---|---|---|
+| top1 | +0.0696 [+0.0511, +0.0882] | 0.0000 | +0.0585 [+0.0264, +0.0906] | 0.0026 |
+| top2 | +0.0625 [+0.0472, +0.0778] | 0.0000 | +0.0547 [+0.0268, +0.0826] | 0.0016 |
+| roc_auc | +0.0171 [+0.0112, +0.0230] | 0.0000 | +0.0122 [+0.0024, +0.0220] | 0.0204 |
+| avg_precision | +0.0616 [+0.0458, +0.0774] | 0.0000 | +0.0474 [+0.0272, +0.0675] | 0.0005 |
 
 **phys_gbm − fp_gbm** — physics descriptors vs hashed environments (pooled over 20 splits; scaffold column is the 10 scaffold splits alone)
 

@@ -32,7 +32,7 @@ from som.viz import (
 )
 
 ORDER = [
-    "prior", "smartcyp", "fp_gbm", "phys_gbm", "phys_bde_gbm",
+    "prior", "smartcyp", "fp_gbm", "basic_gbm", "phys_gbm", "phys_bde_gbm",
     "gnn", "gnn_huckel", "gnn_bde",
 ]
 
@@ -114,7 +114,7 @@ def fig_main(summary):
 
     axes[0].legend(loc="upper left", ncols=2, bbox_to_anchor=(0, 1.0))
     fig.suptitle(
-        "Finding the site of metabolism: eight approaches, two splits",
+        "Finding the site of metabolism: nine approaches, two splits",
         x=0.008, ha="left", fontsize=12, fontweight="semibold",
     )
     footnote(

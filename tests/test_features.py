@@ -115,3 +115,35 @@ def test_atom_count_mismatch_is_caught():
             "n_sources": 1}]
     with pytest.raises(ValueError, match="atom count mismatch"):
         build_atom_table(bad, "phys")
+
+
+def test_the_huckel_ablation_model_uses_the_graph_feature_set(monkeypatch):
+    """`basic_gbm` must be `phys_gbm` minus the Hückel block, nothing else.
+
+    The phys_gbm - basic_gbm comparison is only an ablation of Hückel theory
+    if basic_gbm is fitted on exactly the `phys` columns with huckel_block
+    dropped. `graph` is that set (asserted above to be a strict prefix of
+    `phys`), so this pins the dispatch to it by intercepting the fit rather
+    than by matching source text.
+    """
+    from som import models
+
+    seen = {}
+
+    def spy(name, kind, *a, **kw):
+        seen["kind"] = kind
+        raise _Stop
+
+    class _Stop(Exception):
+        pass
+
+    monkeypatch.setattr(models, "_fit_gbm", spy)
+    try:
+        models.fit_predict("basic_gbm", [], None, "som_all", 0)
+    except Exception:
+        pass
+    assert seen.get("kind") == "graph", (
+        "basic_gbm must be fitted on the 'graph' feature kind; if the "
+        f"dispatch changed (saw {seen.get('kind')!r}), the Hückel ablation "
+        "no longer isolates Hückel"
+    )

@@ -68,8 +68,8 @@ from .features import AtomTable, build_atom_table, isoform_onehot
 from .splits import Split, atom_mask
 
 MODELS = (
-    "prior", "smartcyp", "fp_gbm", "phys_gbm", "gnn", "gnn_huckel",
-    "phys_bde_gbm", "gnn_bde",
+    "prior", "smartcyp", "fp_gbm", "basic_gbm", "phys_gbm", "gnn",
+    "gnn_huckel", "phys_bde_gbm", "gnn_bde",
 )
 
 #: SMARTCyp ships isoform-specific variants for 2D6 and for the 2C subfamily;
@@ -372,7 +372,7 @@ def _fit_gbm(
     p_va = clf.predict_proba(Xva)[:, 1]
 
     importance: dict[str, float] = {}
-    if kind == "phys":
+    if kind in ("phys", "graph"):
         # a linear model on the same features, fitted only so that signed
         # coefficients can be reported; it is not used for predictions
         lin = make_pipeline(
@@ -840,6 +840,13 @@ def fit_predict(
         pred = _fit_smartcyp(instances, table, split, label_field)
     elif name == "fp_gbm":
         pred = _fit_gbm("fp_gbm", "fp", instances, split, label_field, seed, tune)
+    elif name == "basic_gbm":
+        # phys minus the 21 Hückel columns. The `graph` kind is exactly the
+        # `phys` block with huckel_block dropped (and is a strict prefix of
+        # it), so this isolates what the Hückel theory contributes while the
+        # estimator, splits and labels are held fixed.
+        pred = _fit_gbm("basic_gbm", "graph", instances, split,
+                        label_field, seed, tune)
     elif name == "phys_gbm":
         pred = _fit_gbm("phys_gbm", "phys", instances, split, label_field, seed, tune)
     elif name == "phys_bde_gbm":
