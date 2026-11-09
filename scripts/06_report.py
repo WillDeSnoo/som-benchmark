@@ -181,6 +181,12 @@ def main() -> None:
         pairs = [
             ("phys_bde_gbm", "smartcyp",
              "best model vs the published external method"),
+            ("phys_bde_gbm", "gnn",
+             "best model vs the tuned GNN"),
+            ("phys_bde_gbm", "gnn_huckel",
+             "best model vs the GNN given the Hückel descriptors"),
+            ("phys_bde_gbm", "gnn_bde",
+             "best model vs the GNN given the bond dissociation energies"),
             ("smartcyp", "prior",
              "does the published method beat the trivial reference?"),
             ("phys_bde_gbm", "phys_gbm",
@@ -196,33 +202,49 @@ def main() -> None:
             ("phys_gbm", "prior",
              "best model vs the frequency reference"),
         ]
+        def paired(pairs_a, pairs_b, metric, rows):
+            """Paired t-test of model a against b over the given splits."""
+            xa = np.array([float(v[pairs_a][metric]) for v in rows])
+            xb = np.array([float(v[pairs_b][metric]) for v in rows])
+            d = xa - xb
+            _, p = stats.ttest_rel(xa, xb)
+            half = (stats.t.ppf(0.975, d.size - 1)
+                    * d.std(ddof=1) / np.sqrt(d.size))
+            return (f"{d.mean():+.4f} "
+                    f"[{d.mean() - half:+.4f}, {d.mean() + half:+.4f}]",
+                    f"{p:.4f}")
+
         lines = []
         for a, b, why in pairs:
-            avail = [v for v in by_split.values() if a in v and b in v]
+            avail = [v for k, v in by_split.items() if a in v and b in v]
+            scaf = [v for k, v in by_split.items()
+                    if a in v and b in v and k[0] == "scaffold"]
             if len(avail) < 3:
                 continue
-            lines.append(f"**{a} − {b}** — {why} (paired over "
-                         f"{len(avail)} splits)")
+            lines.append(f"**{a} − {b}** — {why} (pooled over "
+                         f"{len(avail)} splits; scaffold column is the "
+                         f"{len(scaf)} scaffold splits alone)")
             lines.append("")
-            lines.append("| metric | difference [95% CI] | p |")
-            lines.append("|---|---|---|")
+            lines.append("| metric | pooled difference [95% CI] | p "
+                         "| scaffold only [95% CI] | p |")
+            lines.append("|---|---|---|---|---|")
             for metric in ("top1", "top2", "roc_auc", "avg_precision"):
-                xa = np.array([float(v[a][metric]) for v in avail])
-                xb = np.array([float(v[b][metric]) for v in avail])
-                d = xa - xb
-                t, p = stats.ttest_rel(xa, xb)
-                half = stats.t.ppf(0.975, d.size - 1) * d.std(ddof=1) / np.sqrt(d.size)
-                lines.append(
-                    f"| {metric} | {d.mean():+.4f} "
-                    f"[{d.mean() - half:+.4f}, {d.mean() + half:+.4f}] "
-                    f"| {p:.4f} |"
-                )
+                pd, pp = paired(a, b, metric, avail)
+                if len(scaf) >= 3:
+                    sd, sp = paired(a, b, metric, scaf)
+                else:
+                    sd = sp = "-"
+                lines.append(f"| {metric} | {pd} | {pp} | {sd} | {sp} |")
             lines.append("")
         if lines:
             out += ["## Paired model comparisons", "",
-                    "Paired t-tests on the per-split differences. Four metrics "
-                    "are tested per pair, so a single p just under 0.05 should "
-                    "be read with that multiplicity in mind.", ""] + lines
+                    "Paired t-tests on the per-split differences. The pooled "
+                    "column averages the random and scaffold splits together; "
+                    "the scaffold column is the harder split on its own, and "
+                    "is the one to quote when the claim is about "
+                    "generalisation to new scaffolds. Four metrics are tested "
+                    "per pair, so a single p just under 0.05 should be read "
+                    "with that multiplicity in mind.", ""] + lines
 
     tun = read("gnn_tuning.csv")
     if tun:

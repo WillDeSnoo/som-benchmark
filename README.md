@@ -191,14 +191,21 @@ not an artifact of the plain GNN having been luckier with its hyperparameters.
 **Which means the Hückel model's advantage is not about chemistry at all — it is
 about model class.** On *identical* features, gradient boosting beats the GNN:
 
-| phys_gbm − gnn_huckel | difference [95% CI] | p |
-|---|---|---|
-| top-1 | +0.016 [−0.001, +0.032] | 0.057 |
-| top-2 | +0.038 [+0.025, +0.051] | <0.0001 |
-| ROC-AUC | +0.019 [+0.014, +0.023] | <0.0001 |
-| avg precision | +0.043 [+0.032, +0.054] | <0.0001 |
+| phys_gbm − gnn_huckel | pooled [95% CI] | p | scaffold only [95% CI] | p |
+|---|---|---|---|---|
+| top-1 | +0.016 [−0.001, +0.032] | 0.057 | +0.020 [−0.011, +0.051] | 0.17 |
+| top-2 | +0.038 [+0.025, +0.051] | <0.0001 | +0.041 [+0.019, +0.062] | 0.0021 |
+| ROC-AUC | +0.019 [+0.014, +0.023] | <0.0001 | +0.019 [+0.013, +0.025] | 0.0001 |
+| avg precision | +0.043 [+0.032, +0.054] | <0.0001 | +0.044 [+0.023, +0.066] | 0.0012 |
 
-Same inputs, same splits, same labels; the only difference is the estimator. At
+Same inputs, same splits, same labels; the only difference is the estimator.
+Note that **top-1 is the one metric this comparison does not establish** — it is
+borderline pooled and clearly null on the scaffold splits alone (n = 10). The
+ranking metrics carry the model-class claim here. The direct comparison of the
+best model against each GNN variant is significant on top-1 on the scaffold
+splits alone (+0.031 to +0.051, p = 0.006 to 0.024, in
+[`results/summary.md`](results/summary.md)), but those differ in features as
+well as estimator, so this table is the cleaner isolation of model class. At
 679 molecules a boosted-tree ensemble fits this problem better than a
 422k-parameter graph network. The honest headline is therefore **not** "physics
 beats deep learning" — it is that at this data scale the tabular model is the

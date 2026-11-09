@@ -104,79 +104,106 @@ Mean over repeated splits, with the 95% CI of the mean.
 
 ## Paired model comparisons
 
-Paired t-tests on the per-split differences. Four metrics are tested per pair, so a single p just under 0.05 should be read with that multiplicity in mind.
+Paired t-tests on the per-split differences. The pooled column averages the random and scaffold splits together; the scaffold column is the harder split on its own, and is the one to quote when the claim is about generalisation to new scaffolds. Four metrics are tested per pair, so a single p just under 0.05 should be read with that multiplicity in mind.
 
-**phys_bde_gbm − smartcyp** — best model vs the published external method (paired over 20 splits)
+**phys_bde_gbm − smartcyp** — best model vs the published external method (pooled over 20 splits; scaffold column is the 10 scaffold splits alone)
 
-| metric | difference [95% CI] | p |
-|---|---|---|
-| top1 | +0.0578 [+0.0361, +0.0796] | 0.0000 |
-| top2 | +0.0549 [+0.0398, +0.0699] | 0.0000 |
-| roc_auc | +0.0875 [+0.0798, +0.0952] | 0.0000 |
-| avg_precision | +0.2671 [+0.2468, +0.2875] | 0.0000 |
+| metric | pooled difference [95% CI] | p | scaffold only [95% CI] | p |
+|---|---|---|---|---|
+| top1 | +0.0578 [+0.0361, +0.0796] | 0.0000 | +0.0389 [+0.0085, +0.0692] | 0.0177 |
+| top2 | +0.0549 [+0.0398, +0.0699] | 0.0000 | +0.0421 [+0.0245, +0.0596] | 0.0004 |
+| roc_auc | +0.0875 [+0.0798, +0.0952] | 0.0000 | +0.0810 [+0.0682, +0.0938] | 0.0000 |
+| avg_precision | +0.2671 [+0.2468, +0.2875] | 0.0000 | +0.2431 [+0.2149, +0.2712] | 0.0000 |
 
-**smartcyp − prior** — does the published method beat the trivial reference? (paired over 20 splits)
+**phys_bde_gbm − gnn** — best model vs the tuned GNN (pooled over 20 splits; scaffold column is the 10 scaffold splits alone)
 
-| metric | difference [95% CI] | p |
-|---|---|---|
-| top1 | +0.2100 [+0.1852, +0.2348] | 0.0000 |
-| top2 | +0.1628 [+0.1418, +0.1837] | 0.0000 |
-| roc_auc | +0.0236 [+0.0152, +0.0319] | 0.0000 |
-| avg_precision | +0.0646 [+0.0465, +0.0827] | 0.0000 |
+| metric | pooled difference [95% CI] | p | scaffold only [95% CI] | p |
+|---|---|---|---|---|
+| top1 | +0.0274 [+0.0123, +0.0425] | 0.0012 | +0.0313 [+0.0052, +0.0574] | 0.0240 |
+| top2 | +0.0273 [+0.0165, +0.0381] | 0.0000 | +0.0236 [+0.0074, +0.0398] | 0.0093 |
+| roc_auc | +0.0255 [+0.0197, +0.0313] | 0.0000 | +0.0268 [+0.0155, +0.0382] | 0.0005 |
+| avg_precision | +0.0744 [+0.0587, +0.0901] | 0.0000 | +0.0800 [+0.0500, +0.1099] | 0.0002 |
 
-**phys_bde_gbm − phys_gbm** — does adding transferred DFT bond dissociation energies help? (paired over 20 splits)
+**phys_bde_gbm − gnn_huckel** — best model vs the GNN given the Hückel descriptors (pooled over 20 splits; scaffold column is the 10 scaffold splits alone)
 
-| metric | difference [95% CI] | p |
-|---|---|---|
-| top1 | +0.0179 [+0.0061, +0.0297] | 0.0050 |
-| top2 | +0.0036 [-0.0051, +0.0123] | 0.4027 |
-| roc_auc | +0.0174 [+0.0125, +0.0222] | 0.0000 |
-| avg_precision | +0.0475 [+0.0375, +0.0575] | 0.0000 |
+| metric | pooled difference [95% CI] | p | scaffold only [95% CI] | p |
+|---|---|---|---|---|
+| top1 | +0.0336 [+0.0197, +0.0475] | 0.0001 | +0.0339 [+0.0123, +0.0555] | 0.0062 |
+| top2 | +0.0414 [+0.0265, +0.0564] | 0.0000 | +0.0415 [+0.0211, +0.0619] | 0.0013 |
+| roc_auc | +0.0358 [+0.0312, +0.0405] | 0.0000 | +0.0388 [+0.0318, +0.0458] | 0.0000 |
+| avg_precision | +0.0902 [+0.0773, +0.1031] | 0.0000 | +0.0969 [+0.0734, +0.1204] | 0.0000 |
 
-**gnn_bde − gnn** — same question, for the GNN (paired over 20 splits)
+**phys_bde_gbm − gnn_bde** — best model vs the GNN given the bond dissociation energies (pooled over 20 splits; scaffold column is the 10 scaffold splits alone)
 
-| metric | difference [95% CI] | p |
-|---|---|---|
-| top1 | -0.0249 [-0.0387, -0.0111] | 0.0013 |
-| top2 | -0.0126 [-0.0261, +0.0009] | 0.0665 |
-| roc_auc | -0.0024 [-0.0085, +0.0037] | 0.4149 |
-| avg_precision | +0.0056 [-0.0112, +0.0225] | 0.4909 |
+| metric | pooled difference [95% CI] | p | scaffold only [95% CI] | p |
+|---|---|---|---|---|
+| top1 | +0.0523 [+0.0344, +0.0703] | 0.0000 | +0.0512 [+0.0174, +0.0850] | 0.0075 |
+| top2 | +0.0399 [+0.0263, +0.0534] | 0.0000 | +0.0336 [+0.0097, +0.0576] | 0.0113 |
+| roc_auc | +0.0279 [+0.0227, +0.0331] | 0.0000 | +0.0254 [+0.0176, +0.0332] | 0.0000 |
+| avg_precision | +0.0688 [+0.0536, +0.0839] | 0.0000 | +0.0625 [+0.0385, +0.0865] | 0.0002 |
 
-**gnn_huckel − gnn** — does giving the GNN the Hückel descriptors help? (paired over 20 splits)
+**smartcyp − prior** — does the published method beat the trivial reference? (pooled over 20 splits; scaffold column is the 10 scaffold splits alone)
 
-| metric | difference [95% CI] | p |
-|---|---|---|
-| top1 | -0.0062 [-0.0191, +0.0066] | 0.3244 |
-| top2 | -0.0141 [-0.0268, -0.0015] | 0.0299 |
-| roc_auc | -0.0103 [-0.0158, -0.0048] | 0.0009 |
-| avg_precision | -0.0158 [-0.0282, -0.0033] | 0.0155 |
+| metric | pooled difference [95% CI] | p | scaffold only [95% CI] | p |
+|---|---|---|---|---|
+| top1 | +0.2100 [+0.1852, +0.2348] | 0.0000 | +0.2102 [+0.1654, +0.2549] | 0.0000 |
+| top2 | +0.1628 [+0.1418, +0.1837] | 0.0000 | +0.1627 [+0.1236, +0.2018] | 0.0000 |
+| roc_auc | +0.0236 [+0.0152, +0.0319] | 0.0000 | +0.0242 [+0.0078, +0.0406] | 0.0087 |
+| avg_precision | +0.0646 [+0.0465, +0.0827] | 0.0000 | +0.0667 [+0.0316, +0.1018] | 0.0020 |
 
-**phys_gbm − gnn_huckel** — same features, different model class (paired over 20 splits)
+**phys_bde_gbm − phys_gbm** — does adding transferred DFT bond dissociation energies help? (pooled over 20 splits; scaffold column is the 10 scaffold splits alone)
 
-| metric | difference [95% CI] | p |
-|---|---|---|
-| top1 | +0.0157 [-0.0005, +0.0319] | 0.0567 |
-| top2 | +0.0379 [+0.0247, +0.0510] | 0.0000 |
-| roc_auc | +0.0185 [+0.0138, +0.0231] | 0.0000 |
-| avg_precision | +0.0427 [+0.0317, +0.0536] | 0.0000 |
+| metric | pooled difference [95% CI] | p | scaffold only [95% CI] | p |
+|---|---|---|---|---|
+| top1 | +0.0179 [+0.0061, +0.0297] | 0.0050 | +0.0137 [-0.0065, +0.0339] | 0.1590 |
+| top2 | +0.0036 [-0.0051, +0.0123] | 0.4027 | +0.0010 [-0.0142, +0.0163] | 0.8814 |
+| roc_auc | +0.0174 [+0.0125, +0.0222] | 0.0000 | +0.0198 [+0.0112, +0.0285] | 0.0006 |
+| avg_precision | +0.0475 [+0.0375, +0.0575] | 0.0000 | +0.0529 [+0.0344, +0.0713] | 0.0001 |
 
-**phys_gbm − fp_gbm** — physics descriptors vs hashed environments (paired over 20 splits)
+**gnn_bde − gnn** — same question, for the GNN (pooled over 20 splits; scaffold column is the 10 scaffold splits alone)
 
-| metric | difference [95% CI] | p |
-|---|---|---|
-| top1 | +0.0606 [+0.0448, +0.0764] | 0.0000 |
-| top2 | +0.0732 [+0.0597, +0.0866] | 0.0000 |
-| roc_auc | +0.0192 [+0.0137, +0.0248] | 0.0000 |
-| avg_precision | +0.0489 [+0.0334, +0.0644] | 0.0000 |
+| metric | pooled difference [95% CI] | p | scaffold only [95% CI] | p |
+|---|---|---|---|---|
+| top1 | -0.0249 [-0.0387, -0.0111] | 0.0013 | -0.0200 [-0.0425, +0.0026] | 0.0761 |
+| top2 | -0.0126 [-0.0261, +0.0009] | 0.0665 | -0.0100 [-0.0343, +0.0143] | 0.3756 |
+| roc_auc | -0.0024 [-0.0085, +0.0037] | 0.4149 | +0.0014 [-0.0096, +0.0124] | 0.7754 |
+| avg_precision | +0.0056 [-0.0112, +0.0225] | 0.4909 | +0.0175 [-0.0005, +0.0354] | 0.0554 |
 
-**phys_gbm − prior** — best model vs the frequency reference (paired over 20 splits)
+**gnn_huckel − gnn** — does giving the GNN the Hückel descriptors help? (pooled over 20 splits; scaffold column is the 10 scaffold splits alone)
 
-| metric | difference [95% CI] | p |
-|---|---|---|
-| top1 | +0.2500 [+0.2262, +0.2738] | 0.0000 |
-| top2 | +0.2141 [+0.1939, +0.2342] | 0.0000 |
-| roc_auc | +0.0937 [+0.0864, +0.1009] | 0.0000 |
-| avg_precision | +0.2842 [+0.2622, +0.3063] | 0.0000 |
+| metric | pooled difference [95% CI] | p | scaffold only [95% CI] | p |
+|---|---|---|---|---|
+| top1 | -0.0062 [-0.0191, +0.0066] | 0.3244 | -0.0027 [-0.0218, +0.0165] | 0.7618 |
+| top2 | -0.0141 [-0.0268, -0.0015] | 0.0299 | -0.0179 [-0.0380, +0.0022] | 0.0745 |
+| roc_auc | -0.0103 [-0.0158, -0.0048] | 0.0009 | -0.0119 [-0.0229, -0.0009] | 0.0364 |
+| avg_precision | -0.0158 [-0.0282, -0.0033] | 0.0155 | -0.0169 [-0.0380, +0.0041] | 0.1026 |
+
+**phys_gbm − gnn_huckel** — same features, different model class (pooled over 20 splits; scaffold column is the 10 scaffold splits alone)
+
+| metric | pooled difference [95% CI] | p | scaffold only [95% CI] | p |
+|---|---|---|---|---|
+| top1 | +0.0157 [-0.0005, +0.0319] | 0.0567 | +0.0202 [-0.0108, +0.0512] | 0.1746 |
+| top2 | +0.0379 [+0.0247, +0.0510] | 0.0000 | +0.0405 [+0.0191, +0.0619] | 0.0021 |
+| roc_auc | +0.0185 [+0.0138, +0.0231] | 0.0000 | +0.0189 [+0.0126, +0.0253] | 0.0001 |
+| avg_precision | +0.0427 [+0.0317, +0.0536] | 0.0000 | +0.0440 [+0.0226, +0.0655] | 0.0012 |
+
+**phys_gbm − fp_gbm** — physics descriptors vs hashed environments (pooled over 20 splits; scaffold column is the 10 scaffold splits alone)
+
+| metric | pooled difference [95% CI] | p | scaffold only [95% CI] | p |
+|---|---|---|---|---|
+| top1 | +0.0606 [+0.0448, +0.0764] | 0.0000 | +0.0592 [+0.0388, +0.0796] | 0.0001 |
+| top2 | +0.0732 [+0.0597, +0.0866] | 0.0000 | +0.0699 [+0.0466, +0.0932] | 0.0001 |
+| roc_auc | +0.0192 [+0.0137, +0.0248] | 0.0000 | +0.0159 [+0.0074, +0.0243] | 0.0021 |
+| avg_precision | +0.0489 [+0.0334, +0.0644] | 0.0000 | +0.0314 [+0.0175, +0.0452] | 0.0006 |
+
+**phys_gbm − prior** — best model vs the frequency reference (pooled over 20 splits; scaffold column is the 10 scaffold splits alone)
+
+| metric | pooled difference [95% CI] | p | scaffold only [95% CI] | p |
+|---|---|---|---|---|
+| top1 | +0.2500 [+0.2262, +0.2738] | 0.0000 | +0.2353 [+0.1979, +0.2728] | 0.0000 |
+| top2 | +0.2141 [+0.1939, +0.2342] | 0.0000 | +0.2037 [+0.1677, +0.2397] | 0.0000 |
+| roc_auc | +0.0937 [+0.0864, +0.1009] | 0.0000 | +0.0854 [+0.0761, +0.0946] | 0.0000 |
+| avg_precision | +0.2842 [+0.2622, +0.3063] | 0.0000 | +0.2569 [+0.2288, +0.2849] | 0.0000 |
 
 ## The GNN hyperparameter search
 
