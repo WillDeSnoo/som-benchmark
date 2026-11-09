@@ -4,7 +4,8 @@ Atom-level prediction of cytochrome P450 sites of metabolism, built to be
 evaluated honestly rather than to produce a large headline number.
 
 **In short.** Eight approaches, 679 molecules, 10 repeated Bemis-Murcko
-scaffold splits, paired significance tests. The best model reaches **0.674
+scaffold splits, paired significance tests (pooled over the 10 random and 10
+scaffold splits, 20 in all). The best model reaches **0.674
 top-1 / 0.812 top-2** at ranking the atom a CYP will oxidise.
 
 | scaffold split, 10 seeds | top-1 | top-2 | ROC-AUC |
@@ -18,7 +19,7 @@ Three results worth more than that number:
 
 - **A 2010 SMARTS lookup table beats two of the six trained models.** SMARTCyp
   touches no training data and lands within 0.058 top-1 of the best model here.
-- **~60 interpretable Hückel descriptors beat 1024 hashed fingerprint bits**
+- **A 55-feature physics set, 21 of them Hückel-derived, beats 1024 hashed fingerprint bits**
   (+0.061 top-1, p < 0.0001) and beat a GNN given identical inputs.
 - **A twelve-point hyperparameter search for the GNN found nothing** — and the
   measurement had to be fixed first, because nondeterministic thread scheduling
@@ -54,7 +55,7 @@ reference points and six models:
 | **atom-type frequency** | nothing but the element, H count, aromaticity and ring membership. A reference point, not a model. |
 | **SMARTCyp** | the published external method (Rydberg & Olsen): DFT activation energies looked up by SMARTS atom type, plus a 2D accessibility term. Uses no training data at all. |
 | **fingerprint + GBM** | hashed circular atom environments (Morgan, radii 0–2) with gradient boosting. |
-| **Hückel physics + GBM** | ~60 interpretable descriptors: simple-Hückel frontier densities and Coulson free valence, Gasteiger charges, E-state indices, Crippen contributions, valence/ring context. |
+| **Hückel physics + GBM** | 55 interpretable descriptors, 21 of them Hückel-derived: simple-Hückel frontier densities and Coulson free valence, Gasteiger charges, E-state indices, Crippen contributions, valence/ring context. |
 | **Hückel + BDE + GBM** | the above plus ALFABET-predicted C–H bond dissociation energies — DFT knowledge transferred from ~290k calculations. |
 | **message-passing GNN** | the molecular graph, learning its own representation from basic atom and bond features. |
 | **GNN + Hückel features** | the same network handed the physics descriptors as extra node features. |
@@ -111,8 +112,8 @@ reports both.
 
 **The physics descriptors beat the hashed fingerprint, clearly.** Paired over 20
 splits, Hückel + GBM gains +0.061 top-1 [+0.045, +0.076] and +0.073 top-2 over
-fingerprint + GBM, both p < 0.0001. About 60 interpretable descriptors beat 1024
-hashed bits.
+fingerprint + GBM, both p < 0.0001. Fifty-five interpretable descriptors, 21 of
+them Hückel-derived, beat 1024 hashed bits.
 
 **Transferred DFT bond dissociation energies help the GBM.** ALFABET predicts
 C–H BDEs at ~0.6 kcal/mol against DFT in milliseconds, having been trained on
@@ -694,7 +695,7 @@ Stated plainly, because they bound what these numbers support:
 - **Modest scale.** 679 molecules is small. The GNN in particular is
   data-limited rather than architecture-limited — a twelve-point search moved it
   nowhere, and it reaches 0.89 train average precision against 0.55 on test —
-  and the fact that it does not beat ~60 hand-built descriptors should be read
+  and the fact that it does not beat 55 hand-built descriptors should be read
   that way rather than as a claim about graph networks.
 - **The GNN's early stopping is not robust.** It selects a single best epoch
   from a validation signal that swings by ±0.03 between neighbouring epochs. I

@@ -13,7 +13,7 @@ something:
     Hückel frontier densities and free valence, Gasteiger charges, E-state
     indices, Crippen atomic contributions, and basic valence/ring context. No
     hashed environment information at all, so it cannot smuggle in the
-    baseline's representation. About 60 features instead of a thousand.
+    baseline's representation. 55 features instead of a thousand.
 
 ``graph``
     Basic atom and bond features for the GNN to build its own representation
