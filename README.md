@@ -31,7 +31,12 @@ two claims that did not survive scrutiny are flagged in place rather than
 quietly restated — [the scaffold-split penalty](#results) and [why extra
 features hurt the GNN](#results).
 
-[Results](#results) · [Where it fails](#where-it-fails) · [The GNN search](#the-gnn-hyperparameter-search) · [What this project is careful about](#what-this-project-is-careful-about) · [Limits](#limits) · [Reproducing](#reproducing)
+**No data is committed here.** The measurements were published as journal
+supporting information, so the repo ships code only and `make data` downloads
+them at run time from a pinned upstream commit. [Why, in
+detail](#data-and-licensing).
+
+[Results](#results) · [Where it fails](#where-it-fails) · [The GNN search](#the-gnn-hyperparameter-search) · [What this project is careful about](#what-this-project-is-careful-about) · [Limits](#limits) · [Reproducing](#reproducing) · [Licensing](#data-and-licensing)
 
 ---
 
@@ -480,16 +485,11 @@ molecules and nine human CYP isoforms, with experimentally annotated sites of
 metabolism at atom resolution.
 
 **No data is committed to this repository.** `make data` downloads it from a
-pinned upstream commit. The reason is a licence subtlety worth stating: the
-upstream redistribution is MIT-licensed, but the original measurements were
-published as ACS journal supporting information, which is not open-licensed by
-default. The MIT grant covers that repository's distribution of the files; it
-does not retroactively open the underlying compilation. Shipping code only and
-citing the primary sources sidesteps the question entirely.
-
-[DATA.md](DATA.md) has the full provenance, the pinned commit, the per-isoform
-counts, and the citations. Anyone intending to redistribute the data itself, or
-to use it commercially, should go back to the original publishers.
+pinned upstream commit, because the upstream MIT licence covers that
+repository's redistribution rather than the underlying ACS supporting
+information — see [Data and licensing](#data-and-licensing) for the reasoning,
+and [DATA.md](DATA.md) for the full provenance, the pinned commit, the
+per-isoform counts and the citations.
 
 ### Curation
 
@@ -779,7 +779,34 @@ The dataset is not mine. If you use it, cite the primary work:
 
 See [DATA.md](DATA.md) for the redistribution route and the licence position.
 
-## Licence
+## Data and licensing
 
-Code: MIT ([LICENSE](LICENSE)). The licence covers this repository's code only,
-not the dataset, which is not distributed here.
+Four separate licences apply to four different things, and only the first one
+is mine to grant.
+
+| | Licence | Shipped here? |
+|---|---|---|
+| This repository's code | MIT ([LICENSE](LICENSE)) | yes |
+| The Zaretzki dataset | see below | **no** — `make data` downloads it |
+| SMARTCyp | LGPL-3.0 | **no** — you build the jar yourself |
+| ALFABET (BDE predictions) | MIT | no — installed from PyPI into its own env |
+
+**The dataset is the one worth explaining.** The upstream redistribution
+([`dmis-lab/ATTNSOM`](https://github.com/dmis-lab/ATTNSOM), pinned commit
+`0faa38bb`) carries an MIT licence. But the underlying measurements were
+published as supporting information to ACS journal articles, which is not
+open-licensed by default. An MIT grant on a repository covers that
+repository's own distribution of the files; it does not retroactively relicense
+someone else's compilation.
+
+I could not verify a clean grant over the data, so this repo re-hosts nothing:
+code only, downloaded at run time, primary sources cited in
+[DATA.md](DATA.md). It costs one extra command and removes the question.
+
+Anyone intending to redistribute the dataset, or to use it commercially, should
+go back to the original publishers — the citations are in
+[DATA.md](DATA.md#original-source-of-the-measurements).
+
+MIT means essentially free use of the code: use, modify, distribute, sell,
+include in closed-source work, provided the copyright notice and licence text
+travel with it and you accept there is no warranty.
