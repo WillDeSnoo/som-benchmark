@@ -593,6 +593,13 @@ The tests check it reproduces ethylene, benzene, butadiene bond orders and free
 valences, the allyl cation/anion electron counts and the allyl node, pyridine
 versus pyrrole nitrogen, and naphthalene's known α-over-β preference.
 
+**[docs/HUCKEL_DESCRIPTORS.md](docs/HUCKEL_DESCRIPTORS.md)** is the reference
+for the descriptor set: all 21 Hückel-derived feature columns with what each
+one means chemically, the Streitwieser h/k parameters as actually used, and
+why the neighbour-aggregated block exists. It is kept in step with the code by
+`tests/test_huckel_docs.py`, which fails if a descriptor is renamed, added or
+removed without the document following.
+
 Because sp³ carbons have no π system of their own, Hückel quantities are also
 aggregated over each atom's heavy neighbours. That is the point: a benzylic
 carbon is not conjugated, but it sits next to something that is, and that is
