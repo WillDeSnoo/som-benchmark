@@ -3,6 +3,38 @@
 Atom-level prediction of cytochrome P450 sites of metabolism, built to be
 evaluated honestly rather than to produce a large headline number.
 
+**In short.** Eight approaches, 679 molecules, 10 repeated Bemis-Murcko
+scaffold splits, paired significance tests. The best model reaches **0.674
+top-1 / 0.812 top-2** at ranking the atom a CYP will oxidise.
+
+| scaffold split, 10 seeds | top-1 | top-2 | ROC-AUC |
+|---|---|---|---|
+| atom-type frequency (trivial reference) | 0.425 | 0.607 | 0.802 |
+| SMARTCyp (published, untrained) | 0.635 | 0.770 | 0.826 |
+| **Hückel + BDE + GBM** (best) | **0.674** | **0.812** | **0.907** |
+| message-passing GNN (tuned) | 0.643 | 0.788 | 0.880 |
+
+Three results worth more than that number:
+
+- **A 2010 SMARTS lookup table beats two of the six trained models.** SMARTCyp
+  touches no training data and lands within 0.058 top-1 of the best model here.
+- **~60 interpretable Hückel descriptors beat 1024 hashed fingerprint bits**
+  (+0.061 top-1, p < 0.0001) and beat a GNN given identical inputs.
+- **A twelve-point hyperparameter search for the GNN found nothing** — and the
+  measurement had to be fixed first, because nondeterministic thread scheduling
+  was producing run-to-run noise larger than the differences being searched
+  over.
+
+The point of the repo is the evaluation, not the model: every number is
+generated rather than transcribed, the test set is kept out of all tuning, and
+two claims that did not survive scrutiny are flagged in place rather than
+quietly restated — [the scaffold-split penalty](#results) and [why extra
+features hurt the GNN](#results).
+
+[Results](#results) · [Where it fails](#where-it-fails) · [The GNN search](#the-gnn-hyperparameter-search) · [What this project is careful about](#what-this-project-is-careful-about) · [Limits](#limits) · [Reproducing](#reproducing)
+
+---
+
 For a given molecule and a given CYP isoform, every heavy atom is a candidate
 and the task is to rank them so the atoms that actually get oxidised come out on
 top. It is the computational question behind "which position do I block to stop
@@ -29,7 +61,7 @@ The last two are ablations: they separate "what information is available" from
 The frequency reference is there on purpose. "Top-1 of 0.65" means very little
 until you know that guessing by atom type alone already gets a good way there,
 and most of the interesting information in this project is in the gaps between
-the four rows rather than in any one of them.
+the eight rows rather than in any one of them.
 
 ---
 
