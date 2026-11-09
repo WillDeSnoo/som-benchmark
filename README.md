@@ -111,11 +111,40 @@ the GBM.
 So the earlier reading, that the physics and the learned representation carry
 the same information, was too kind. Twenty-one extra node features, which a
 boosted-tree model turns into its best result, cost this GNN about a point of
-top-2 and a point of AUC. The straightforward explanation is capacity against
-sample size: at 679 molecules a 400k-parameter network given a wider input has
-more ways to fit the training set and no more evidence to constrain it. The
-identical features add signal to one model class and subtract it from the
-other.
+top-2 and a point of AUC.
+
+**On the mechanism, I was wrong once and have corrected it.** This section used
+to say the cause was capacity against sample size — a wider input giving the
+network more ways to fit the training set. That is the natural explanation and
+it is not what the data show. Training both variants for a fixed 60 epochs on
+one scaffold split:
+
+| scaffold split, seed 0, epoch 60 | GNN | GNN + Hückel |
+|---|---|---|
+| train avg precision | 0.885 | 0.902 |
+| test avg precision | 0.540 | 0.558 |
+| best validation score | 0.5755 (ep 51) | 0.5707 (ep 53) |
+
+Both overfit enormously — train 0.89 against test 0.55, a gap of ~0.34 for a
+400k-parameter model on 679 molecules — but they overfit *equally*. At matched
+epochs the wider input fits the training data slightly better, not worse, and
+the best validation scores differ by 0.005. Extra features are not adding
+overfitting.
+
+What does differ is the stability of the validation signal: across epochs the
+plain GNN reads 0.537, 0.551, 0.546, 0.555, 0.553, while the Hückel variant
+reads 0.543, 0.504, 0.529, 0.560, 0.526. Training stops after 20 epochs without
+improvement and restores the best epoch, so a noisier signal gets a worse
+checkpoint — sometimes dramatically, since an early lucky spike can roll the
+model back forty epochs. The likeliest mechanism for the measured deficit is
+therefore **unstable checkpoint selection on a noisier validation signal**,
+which is a property of my stopping rule as much as of the features.
+
+The measured difference stands — it is a paired result over 20 splits. The
+explanation for it does not, and the diagnostic above is one split, so it
+cannot overturn the measurement either. What it does rule out is the tidy
+story. Fixing the checkpoint selection is now the most promising GNN change,
+and it is listed below.
 
 This now rests on a tuned comparison rather than a default one — each variant
 got its own search, described [below](#the-gnn-hyperparameter-search), so it is
@@ -625,8 +654,13 @@ Stated plainly, because they bound what these numbers support:
   DFT or UMA calculation on these molecules would be the stronger version.
 - **Modest scale.** 679 molecules is small. The GNN in particular is
   data-limited rather than architecture-limited — a twelve-point search moved it
-  nowhere — and the fact that it does not beat ~60 hand-built descriptors should
-  be read that way rather than as a claim about graph networks.
+  nowhere, and it reaches 0.89 train average precision against 0.55 on test —
+  and the fact that it does not beat ~60 hand-built descriptors should be read
+  that way rather than as a claim about graph networks.
+- **The GNN's early stopping is not robust.** It selects a single best epoch
+  from a validation signal that swings by ±0.03 between neighbouring epochs. I
+  found this while checking a claim rather than by design, it plausibly drives
+  the feature-ablation deficits, and it is not fixed here.
 - **The Hückel parameters for P and Se are rough analogues**, not fitted values,
   and are flagged as such in the code.
 - **The hyperparameter searches are coarse.** Four configurations for the
@@ -668,7 +702,14 @@ In rough order of what would most change the conclusions:
    negatives.
 4. **An ensemble of the frequency reference with a learned model**, given how
    badly the learned models lose on sulfur and methyl sites.
-5. **A GNN trained on more data than this.** Not a wider search on these 679
+5. **Stable checkpoint selection for the GNN.** The learning curves above show
+   validation average precision swinging by ±0.03 between neighbouring epochs,
+   and early stopping restores a single best epoch from that noisy signal.
+   Selecting on a smoothed or averaged score — or averaging weights over the
+   last few epochs — is cheap, and it is the most likely explanation for the
+   small deficit the feature ablations measure. This should be tried before any
+   further conclusion is drawn from `gnn_huckel − gnn`.
+6. **A GNN trained on more data than this.** Not a wider search on these 679
    molecules — that was tried and moved nothing. The informative experiment is
    pre-training on a larger metabolism or reactivity corpus and fine-tuning
    here, which tests the data-limited explanation directly instead of assuming
